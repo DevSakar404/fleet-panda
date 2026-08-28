@@ -4,14 +4,14 @@ A voice-and-chat support agent for FleetPanda's dispatch platform. It answers
 natural-language questions about the dispatch database with hard multi-tenant
 isolation, and triages incoming support tickets against five data sources.
 
-> **Build status: text-to-SQL and escalation working, agent shell pending.** The
-> data layer, the database layer, the tenant isolation guard, the SQL agent and
-> escalation scoring are complete and tested. Routing, the triage pipeline and the
-> CLI remain stubs with specifications in their module docstrings. Voice mode is
-> not started.
+> **Build status: chat mode works end to end. Voice mode not started.** Data
+> layer, database layer, isolation guard, SQL agent, escalation scoring, triage
+> pipeline, router and CLI are all built and tested. No stubs remain.
 >
-> The SQL agent has not yet spoken to a real model — no API key is available here,
-> so its tests drive it with a scripted fake. See OPEN_QUESTIONS.md Q-012. See
+> Two caveats worth reading before a demo: the agent has never spoken to a real
+> model (no API key here — its tests drive it with a scripted fake, Q-012), and a
+> *pasted* ticket body is recognised but not yet parsed, so triage works by ticket
+> id only (Q-015). See
 > [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md) for the session summary and next tasks.
 >
 > The assignment brief as received is preserved in git history at commit
@@ -43,7 +43,7 @@ cp .env.example .env
 .venv/bin/python -m pytest tests/ -q
 ```
 
-148 pass, no skips. The eight graded questions are asserted twice: once against
+198 pass, no skips. The eight graded questions are asserted twice: once against
 hand-written reference SQL, and once end to end through the agent.
 
 To see the isolation tests alone — the ones worth reading first:
@@ -54,10 +54,29 @@ To see the isolation tests alone — the ones worth reading first:
 
 ## Chat mode
 
-Not yet implemented — `src/interfaces/cli_chat.py` is a stub. It will run as:
-
 ```bash
 .venv/bin/python -m src.interfaces.cli_chat
+```
+
+Runs without an API key: tenant binding, ticket triage and every isolation refusal
+are deterministic. Only data questions need a model.
+
+```
+use CFS            scope the session to Cascade Fuel Services
+platform           switch to an internal, cross-tenant session
+scope              show the current scope
+triage 1083        build a ticket brief
+<question>         ask about delivery data
+```
+
+Worth trying in a demo, in this order — it walks the whole isolation story in four
+lines:
+
+```
+use Fuel           -> refuses, offers three candidates (never guesses)
+use CFS            -> binds to tenant 1
+triage 1083        -> refused: that ticket belongs to another customer
+platform           -> then triage 1083 works
 ```
 
 ## Voice mode
@@ -115,10 +134,10 @@ src/
     prompts.py       every system prompt, in one file
   agent/
     session.py       TenantContext: who is asking, and what they may see
-    router.py        STUB   intent classification and dispatch
+    router.py               intent classification and dispatch
     sql_agent.py            question -> guarded SQL -> answer
-    triage_agent.py  STUB   ticket -> five-source brief
+    triage_agent.py         ticket -> five-source brief
     escalation.py           deterministic scoring, no LLM
   interfaces/
-    cli_chat.py      STUB   terminal transport
+    cli_chat.py             terminal transport
 ```

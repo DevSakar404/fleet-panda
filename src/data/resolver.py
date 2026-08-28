@@ -272,6 +272,7 @@ class TenantResolver:
         hits = process.extract(
             key, idx.normalized_keys, scorer=fuzz.token_set_ratio,
             limit=config.MAX_RESOLUTION_CANDIDATES,
+            score_cutoff=config.NEAREST_SUGGESTION_FLOOR,
         )
         seen: dict[int, float] = {}
         for matched_key, score, _ in hits:

@@ -45,6 +45,15 @@ FUZZY_MATCH_THRESHOLD: Final[float] = 88.0
 # these out loud, so more than three is unusable over audio.
 MAX_RESOLUTION_CANDIDATES: Final[int] = 3
 
+# Floor for "did you mean ...?" suggestions on a name that resolved to nothing.
+# Well below FUZZY_MATCH_THRESHOLD -- these are never auto-selected, they only
+# make a refusal useful. 50 sits in the gap measured against the alias index:
+# genuine typos score 67-100 ('Cascad' 67, 'Summit Enrgy' 96), pure nonsense
+# scores 0 ('zzzzzzzz', 'qqq'), and coincidental word overlap lands around 40
+# ('Wobblegong Oil' matches 'Timber Ridge Oil' only because both end in "oil").
+# Without a floor, every unknown string got three confident-looking suggestions.
+NEAREST_SUGGESTION_FLOOR: Final[float] = 50.0
+
 # Stripped before comparison so 'Summit Energy Group Inc' matches 'Summit Energy
 # Group'. Deliberately does NOT include 'services' or 'fuel' -- those are part of
 # the real company names and stripping them would collapse distinct tenants.

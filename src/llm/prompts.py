@@ -13,7 +13,13 @@ only one, and a refusal is never a matter of the model's cooperation.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from src.db.schema import introspect
+
+if TYPE_CHECKING:  # import cycle: the agent imports prompts, not the other way round
+    from src.agent.escalation import EscalationAssessment
+    from src.agent.triage_agent import TicketContext
 
 # The model is told *not* to add a tenant filter. This is counter-intuitive and is
 # the point: if the model writes its own `WHERE tenant_id = ...` and the guard
@@ -96,6 +102,77 @@ Reply with exactly one word:
   ticket_triage   - a support ticket to be analysed, or a request to triage one
   clarify         - too ambiguous to route, or missing the tenant it refers to
 """
+
+
+def build_triage_payload(context: "TicketContext", assessment: "EscalationAssessment") -> dict:
+    """Flatten a context pack and an escalation verdict into the triage prompt body.
+
+    Lives here rather than in `triage_agent.py` for two reasons. It is prompt
+    content -- what the model is shown is exactly as much a prompt decision as the
+    system message above it, and this file is where prompt decisions are read
+    during a walkthrough. And it kept `triage_agent.py` over the ~350-line ceiling
+    in CLAUDE.md section 6 (D-015).
+
+    Note what is included: the escalation level and its reasons are passed IN. The
+    model explains the decision; it does not make it.
+    """
+    return {
+        "ticket": {
+            "id": context.ticket.ticket_id,
+            "subject": context.ticket.subject,
+            "description": context.ticket.description,
+            "product_area": context.ticket.product_area,
+            "priority": context.ticket.priority,
+            "status": context.ticket.status,
+            "created_at": str(context.ticket.created_at),
+        },
+        "customer": {
+            "name": context.tenant.name,
+            "health_score": context.tenant.health_score,
+            "carr": context.tenant.carr,
+            "contract_end_date": str(context.tenant.contract_end_date),
+            "assigned_csm": context.tenant.assigned_csm,
+            "modules_active": sorted(context.tenant.modules_active),
+            "onboarding_status": context.tenant.onboarding_status,
+        },
+        "escalation": {
+            "level": assessment.level.value,
+            "score": assessment.score,
+            "account_risk": assessment.account_risk,
+            "ticket_risk": assessment.ticket_risk,
+            "reasons": list(assessment.reasons),
+            "missing_module": assessment.missing_module,
+        },
+        "duplicates": [
+            {"id": t.ticket_id, "created_at": str(t.created_at), "status": t.status}
+            for t in context.duplicates
+        ],
+        "past_tickets": [
+            {"id": t.ticket_id, "subject": t.subject, "status": t.status,
+             "resolution": t.resolution}
+            for t in context.past_tickets
+        ],
+        "calls": [
+            {"date": str(c.call_date), "topic": c.topic, "sentiment": c.sentiment,
+             "competitor_mentioned": c.competitor_mentioned,
+             "action_items": list(c.action_items)}
+            for c in context.calls
+        ],
+        "kb_articles": [
+            {"id": a.article_id, "title": a.title, "root_cause": a.root_cause,
+             "resolution": a.resolution, "updated_at": str(a.updated_at)}
+            for a in context.kb_articles
+        ],
+        "operations": {
+            "completed_last_30": context.operations.completed_last_30,
+            "completed_prior_30": context.operations.completed_prior_30,
+            "volume_change_pct": context.operations.volume_change_pct,
+            "emergency_last_30": context.operations.emergency_last_30,
+            "open_orders": context.operations.open_orders,
+            "anchor_date": context.operations.anchor_date,
+        },
+        "sources_with_no_data": list(context.missing_sources),
+    }
 
 
 def build_sql_prompt() -> str:

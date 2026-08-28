@@ -269,3 +269,29 @@ anything.
 **Needs you to:** nothing now. Worth saying out loud in the live session if escalation
 logic comes up — the honest answer is that the ordering is defensible and the magnitudes
 are a guess awaiting feedback data.
+
+### Q-015 · A pasted ticket is recognised but not parsed — FUNCTIONAL GAP
+**Context:** The assignment says the user "types a question or **pastes a ticket**".
+`Router.classify` detects a pasted ticket body (multi-line with form labels) and routes
+it to triage, but `_triage` then needs a ticket **id** and asks for one. Triage works
+today only for tickets already in `tickets.json`, addressed by number.
+**Taken:** made the limitation explicit in the reply rather than guessing at the fields.
+Parsing free-text into a `Ticket` needs a decision about what happens when the paste has
+no tenant, no product_area, or a product_area outside the known vocabulary — and
+inventing a `tenant_id` is precisely the failure this system is built to prevent.
+**Needs you to:** decide the shape. My view: an LLM extraction call into a Pydantic
+`PastedTicket` (subject, description, product_area, tenant_name), then run the tenant
+name through `TenantResolver` and **refuse if it does not resolve** rather than
+defaulting to the session's tenant. That reuses D-003's fail-closed rule instead of
+adding a second one. Roughly an hour, and it is the last gap between the current build
+and the assignment's stated chat behaviour.
+
+### Q-016 · Intent classification falls through to the query path without a model
+**Context:** `Router.classify` uses heuristics first and only asks the model for
+genuinely ambiguous input. With no API key there is no model, so ambiguous input is
+treated as a dispatch query.
+**Taken:** deliberate — the SQL agent's own refusal ("I could not turn that into a
+query") is a better error than "I do not know what you meant", and it keeps the CLI
+demoable with no key.
+**Needs you to:** nothing. Flagged only because it means the unmodelled CLI behaves
+subtly differently from the modelled one, which is worth knowing before a demo.

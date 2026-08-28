@@ -179,9 +179,10 @@ def _call_signals(calls: tuple[CallTranscript, ...]) -> list[Signal]:
 
     negative = [c for c in recent if c.sentiment == "negative"]
     if negative:
+        verb = "was" if len(negative) == 1 else "were"
         signals.append(Signal(
             "negative_sentiment", config.WEIGHT_NEGATIVE_SENTIMENT,
-            f"{len(negative)} of the last {len(recent)} calls were negative "
+            f"{len(negative)} of the last {len(recent)} calls {verb} negative "
             f"(most recent {negative[0].call_date}: {negative[0].topic}).",
         ))
 

@@ -4,8 +4,9 @@ The walkthrough script. `RECON.md` explains *why* the design is shaped this way;
 `DECISIONS.md` records the contested choices; this file is the map you read while
 tracing a request end to end.
 
-**Status:** solid boxes are built and tested. Dashed boxes are stubs whose module
-docstrings carry their specification (Step 4).
+**Status:** everything below is built and tested except the dashed voice transport
+(Step 5). Note that a *pasted* ticket body reaches `triage_agent` only as a ticket
+id today — see OPEN_QUESTIONS.md Q-015.
 
 ---
 
@@ -17,10 +18,10 @@ promise (CLAUDE.md §2).
 
 ```mermaid
 graph TD
-    CHAT[cli_chat.py<br/>STUB] --> ROUTE
+    CHAT[cli_chat.py] --> ROUTE
     VOICE[voice transport<br/>Step 5] --> ROUTE
 
-    ROUTE[router.route<br/>STUB] --> RESOLVE
+    ROUTE[router.route] --> RESOLVE
 
     RESOLVE[TenantResolver.resolve] -->|ambiguous or unresolved| CLARIFY[clarify:<br/>ranked candidates,<br/>never a guess]
     RESOLVE -->|tenant_id| CTX[TenantContext<br/>TENANT or PLATFORM]
@@ -42,12 +43,12 @@ graph TD
     RUN --> ASSERT[assert no foreign tenant_id]
     ASSERT --> SYNTH[LLM synthesises rows<br/>+ states the date anchor]
 
-    TRIAGE[triage_agent<br/>STUB] --> PACK
+    TRIAGE[triage_agent] --> PACK
     SYNTH --> OUT[uniform response:<br/>answer + executed SQL + rows]
     PACK[context pack] --> OUT
 
     classDef stub stroke-dasharray:5 5
-    class CHAT,VOICE,ROUTE,TRIAGE,PACK stub
+    class VOICE stub
 ```
 
 The two refusal paths are the interesting part and they refuse for different

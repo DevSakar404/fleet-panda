@@ -397,6 +397,27 @@ question Q5 asserts 17 — two numbers in one system disagreeing. Now pinned by
 `test_the_snapshot_agrees_with_the_graded_question`.
 **Where it lives:** `src/agent/triage_agent.py:TriageAgent.operational_snapshot`.
 
+### D-015 · `triage_agent.py` split at the prompt boundary, not at a class boundary
+**Date:** 2026-08-29
+**Context:** `triage_agent.py` reached 367 lines, over the ~350 ceiling in
+CLAUDE.md section 6, which asks for a split "along a real seam" and a note here.
+**Options considered:**
+- A. Extract `find_kb_articles` into `src/agent/kb_match.py`. A genuine concern
+  boundary, but it invents a file CLAUDE.md section 4 does not list, and KB
+  matching is 25 lines -- a file per function is how a four-file layer becomes a
+  twelve-file one.
+- B. Extract the context-pack dataclasses. They are the module's vocabulary; moving
+  them makes the file shorter and harder to read in one pass.
+- C. Move `build_triage_payload` into `llm/prompts.py`.
+**Chosen:** C. What the model is shown is as much a prompt decision as the system
+message above it, and `prompts.py` already exists so that every prompt decision is
+readable in one place during a walkthrough. The seam is real rather than
+size-driven: the payload builder's only job is to decide what the model sees.
+**Trade-off accepted:** `prompts.py` now imports two agent types, which is a
+direction the layering otherwise avoids -- kept under `TYPE_CHECKING` so there is
+no runtime cycle, but it is a wart. 311 and 180 lines respectively.
+**Where it lives:** `src/llm/prompts.py:build_triage_payload`.
+
 ---
 
 ## Data quality observations

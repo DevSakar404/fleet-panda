@@ -269,63 +269,7 @@ class TriageAgent:
 
     def _narrate(self, context: TicketContext, assessment: EscalationAssessment) -> TicketBrief:
         """One LLM call for three prose sections. It is given the level, not asked."""
-        payload = {
-            "ticket": {
-                "id": context.ticket.ticket_id,
-                "subject": context.ticket.subject,
-                "description": context.ticket.description,
-                "product_area": context.ticket.product_area,
-                "priority": context.ticket.priority,
-                "status": context.ticket.status,
-                "created_at": str(context.ticket.created_at),
-            },
-            "customer": {
-                "name": context.tenant.name,
-                "health_score": context.tenant.health_score,
-                "carr": context.tenant.carr,
-                "contract_end_date": str(context.tenant.contract_end_date),
-                "assigned_csm": context.tenant.assigned_csm,
-                "modules_active": sorted(context.tenant.modules_active),
-                "onboarding_status": context.tenant.onboarding_status,
-            },
-            "escalation": {
-                "level": assessment.level.value,
-                "score": assessment.score,
-                "account_risk": assessment.account_risk,
-                "ticket_risk": assessment.ticket_risk,
-                "reasons": list(assessment.reasons),
-                "missing_module": assessment.missing_module,
-            },
-            "duplicates": [
-                {"id": t.ticket_id, "created_at": str(t.created_at), "status": t.status}
-                for t in context.duplicates
-            ],
-            "past_tickets": [
-                {"id": t.ticket_id, "subject": t.subject, "status": t.status,
-                 "resolution": t.resolution}
-                for t in context.past_tickets
-            ],
-            "calls": [
-                {"date": str(c.call_date), "topic": c.topic, "sentiment": c.sentiment,
-                 "competitor_mentioned": c.competitor_mentioned,
-                 "action_items": list(c.action_items)}
-                for c in context.calls
-            ],
-            "kb_articles": [
-                {"id": a.article_id, "title": a.title, "root_cause": a.root_cause,
-                 "resolution": a.resolution, "updated_at": str(a.updated_at)}
-                for a in context.kb_articles
-            ],
-            "operations": {
-                "completed_last_30": context.operations.completed_last_30,
-                "completed_prior_30": context.operations.completed_prior_30,
-                "volume_change_pct": context.operations.volume_change_pct,
-                "emergency_last_30": context.operations.emergency_last_30,
-                "open_orders": context.operations.open_orders,
-                "anchor_date": context.operations.anchor_date,
-            },
-            "sources_with_no_data": list(context.missing_sources),
-        }
+        payload = prompts.build_triage_payload(context, assessment)
 
         response = self._llm.complete(
             system=prompts.TICKET_TRIAGE_SYSTEM_PROMPT,
