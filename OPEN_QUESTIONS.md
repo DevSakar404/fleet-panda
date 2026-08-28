@@ -1,5 +1,99 @@
 # OPEN_QUESTIONS.md
 
+## Session summary
+
+**Foundation session, 2026-08-28. Steps 0-3 complete. 94 tests pass, 12 skip
+(the agent-path tests, as scoped). Five commits, one per step plus a baseline.**
+
+### What was built
+
+| Layer | Files | State |
+|---|---|---|
+| Recon | `RECON.md` | Complete — 12 sections, every claim script-derived |
+| Data | `config.py`, `data/loaders.py`, `data/resolver.py`, `data/sources.py`, `data/repository.py` | Complete, tested |
+| Database | `db/connection.py`, `db/schema.py`, `db/guard.py`, `db/executor.py` | Complete, tested |
+| Session | `agent/session.py` | Complete (pulled forward from Step 3 — the guard needs it) |
+| LLM | `llm/client.py`, `llm/prompts.py` | Complete, unexercised (no live call this session) |
+| Agent | `agent/router.py`, `sql_agent.py`, `triage_agent.py`, `escalation.py`, `interfaces/cli_chat.py` | Stubs with full specs in docstrings |
+
+Tenant isolation is three independent layers: a read-only connection SQLite itself
+enforces, an AST rewrite that puts `tenant_id = N` on every scoped table reference
+including subqueries and CTE bodies, and a post-execution assertion on returned
+rows. Cross-tenant questions are refused in a scoped session rather than narrowed.
+
+### What recon turned up that changed the plan
+
+1. **The dataset ends 2026-05-29 — 91 days before today.** Anchored on
+   `date('now')`, questions 1, 2, 5 and 8 return *zero rows*. Correct SQL, useless
+   answer, and in a live demo it reads as a broken agent. Everything relative is
+   now anchored on `MAX(delivery_date)` and the agent states the anchor in its
+   reply (D-001). This was the single most consequential finding.
+2. **`token_set_ratio` scores a bare substring 100.** `"Fuel"` matches three
+   tenants at full confidence. A score-gated resolver would have leaked across
+   tenants *before any SQL exists*, where the guard cannot see it. The gate is now
+   the number of distinct tenants above threshold, not the score (D-003).
+3. **`product_area` and `modules_active` are different vocabularies.** The obvious
+   module-mismatch check flags 58 of 85 tickets; the mapped version flags 26 real
+   ones (D-002). The naive version would have looked like a working feature.
+4. **Only `tank_readings` fans out** (900 rows / 30 customers, 9.06x inflation).
+   Every other foreign key is 1:1, so Q2 and Q7 are safe provided nothing reaches
+   for it. Narrower than the charter's warning implied.
+5. **`SCHEMA.md` documents enum literals that never occur.** The schema card is
+   introspected from the live database instead (D-006).
+6. **Entity resolution against the provided data has zero failures.** The alias
+   table covers every transcript name exactly. Fuzzy matching is therefore for
+   voice and free text, not for ingest — which reframes what the resolver is for.
+7. **Ticket #1083 (tenant 4) satisfies all three mandated triage test cases at
+   once**: health 28, contract expired 2026-07-15, 4th duplicate filing in 26
+   days, and asks about `tank_monitor` which that tenant does not have.
+
+Three bugs were found by testing rather than by reading, all in the guard, all
+silent: a sqlglot argument rename that disabled predicate injection entirely
+while still producing valid SQL; a case-sensitive allowlist against
+case-insensitive SQLite identifiers; and a schema-qualified name that could
+reference outside the opened database. The first is why there are three layers
+and not one (D-004).
+
+### What is stubbed
+
+`router.py`, `sql_agent.py`, `triage_agent.py`, `escalation.py`, `cli_chat.py` —
+each raises `NotImplementedError` with its intended data flow written out in the
+module docstring. Two Step 4 design arguments are pre-made there: intent
+classification should try heuristics before spending an LLM round trip (it sits on
+the voice critical path), and KB retrieval over 12 articles does not need a vector
+database when `product_area` plus symptom overlap solves it exactly.
+
+`SECURITY.md` is headings only, as scoped. Voice mode is untouched.
+
+### What needs your decision
+
+Ten questions below. The four that actually matter:
+
+- **Q-001** — CLAUDE.md §9 says questions 1 and 7 are cross-tenant; it is 1, 2, 7
+  and 8. I implemented the corrected set and left the charter unedited. *This one
+  needs a real answer before Step 4.*
+- **Q-002** — the `billing→invoicing` / `reporting→analytics` mapping is my
+  inference and drives the whole module-mismatch feature.
+- **Q-005** — the -10% materiality threshold for "declining volume" (Q8).
+- **Q-009** — `UNION` is currently rejected outright. Cheap to support, but not a
+  change to make unattended.
+
+### Next three tasks
+
+1. **`sql_agent.py`** — question → `build_sql_prompt()` → guarded SQL → rows →
+   prose. The correctness oracle already exists: the eight reference tests in
+   `test_sql_questions.py` assert real numbers, so un-skip the agent half and work
+   until it matches. Includes one retry that feeds `GuardResult.reasons` back to
+   the model, and never retrying a `TenantIsolationError`.
+2. **`escalation.py`** — pure scoring functions with unit tests, before any triage
+   prompt exists. Signals and thresholds are enumerated in its docstring and
+   already in `config.py`. Ticket #1083 is the fixture.
+3. **`router.py` + `cli_chat.py`** — enough to demo chat mode end to end, printing
+   the guard's rewritten SQL alongside each answer. That demo is what makes the
+   isolation work visible in the live session.
+
+---
+
 Questions raised during the build. Per CLAUDE.md §8, none of these blocked: each was resolved
 by taking the more conservative option, and the alternative is recorded here for review.
 
