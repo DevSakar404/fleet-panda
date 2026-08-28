@@ -1,238 +1,119 @@
-# FleetPanda AI Engineer - Take-Home Assignment
+# FleetPanda AI Support Agent
 
-## The Objective
+A voice-and-chat support agent for FleetPanda's dispatch platform. It answers
+natural-language questions about the dispatch database with hard multi-tenant
+isolation, and triages incoming support tickets against five data sources.
 
-Build a working **voice and chat support agent** for FleetPanda, a B2B SaaS platform that provides dispatch management software to ~50 fuel delivery companies (called "tenants"). Each tenant has drivers, trucks, delivery orders, and end-customers they deliver fuel to. FleetPanda is SOC 2 Type 2 compliant and serves all tenants from shared infrastructure.
+> **Build status: foundation.** The data layer, the database layer and the tenant
+> isolation guard are complete and tested. The agent itself (routing, text-to-SQL,
+> triage) is scaffolded with specifications in each module docstring and raises
+> `NotImplementedError`. Voice mode is not started. See
+> [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md) for the session summary and next tasks.
+>
+> The assignment brief as received is preserved in git history at commit
+> `0554639`.
 
-Your agent must do two things:
+## Setup
 
-1. **Answer dispatch database questions** - A support rep or CSM types or says "How many deliveries did Cascade Fuel complete last week?" and gets an accurate, tenant-scoped answer powered by SQL.
+Requires Python 3.11+ (developed on 3.12).
 
-2. **Triage incoming support tickets** - A new ticket comes in. The agent pulls the customer's full context (health score, contract status, delivery stats, past tickets, recent calls, relevant knowledge base articles) and produces a structured brief with an escalation recommendation.
-
-The agent must work in **both chat mode** (text in, text out) **and voice mode** (speech in, speech out). Both modes use the same underlying intelligence.
-
----
-
-## What You Receive
-
-### Data Files
-
-| File | Description |
-|------|-------------|
-| `dispatch.db` | SQLite database with 90 days of operational data: delivery orders, shifts, drivers, trucks, end-customers, tank readings. ~10K delivery orders across 12 tenants. |
-| `SCHEMA.md` | Full schema documentation for dispatch.db |
-| `customers.json` | 12 tenant profiles with health scores, CARR (contracted annual recurring revenue), active modules, contract dates, assigned CSM |
-| `tenant_aliases.json` | Mapping of alternate company names to canonical tenant IDs. Companies are referred to by different names across different systems. |
-| `tickets.json` | ~85 support tickets across 12 tenants |
-| `call_transcripts.json` | ~43 call transcript summaries. These use `tenant_name` (string), NOT `tenant_id` (integer). Entity resolution required. |
-| `knowledge_base.json` | 12 known-issue articles with symptoms, root causes, and resolutions |
-
-### Important data characteristics
-
-- The dispatch database uses `tenant_id` (integer) everywhere for multi-tenant isolation
-- Call transcripts use `tenant_name` which may be a canonical name OR an alias (see `tenant_aliases.json`)
-- Explore the data carefully before building. Not everything is clean.
-
----
-
-## What to Build
-
-### The Agent (this is the main deliverable)
-
-Build a single agent application with two interfaces:
-
-**Chat mode:**
-- Text input via terminal, API, or simple web UI (your choice)
-- The user types a question or pastes a ticket
-- The agent responds with either a data answer (for dispatch queries) or a ticket brief (for support triage)
-
-**Voice mode:**
-- Speech input via microphone (use any STT: Whisper, Deepgram, Google, browser API, etc.)
-- Speech output via any TTS (OpenAI TTS, ElevenLabs, pyttsx3, browser API, etc.)
-- Same underlying agent logic as chat mode
-- A basic terminal-based or browser-based implementation is fine. We are not judging UI polish. We are judging that it works end-to-end: you speak, it understands, it queries, it speaks back.
-
-### Agent Capability 1: Dispatch Database Queries (text-to-SQL)
-
-The agent answers natural language questions about the dispatch database by generating and executing SQL.
-
-**Test questions your agent must handle (include these in your test suite):**
-
-1. "How many deliveries were completed in the last 7 days across all tenants?"
-2. "Which tenant delivered the most gallons of diesel last month?"
-3. "Show me the top 5 drivers by total deliveries for tenant 3"
-4. "What is the average gallons per delivery for propane orders?"
-5. "How many emergency orders did tenant 4 have in the past 30 days?"
-6. "Which trucks are currently in maintenance status?"
-7. "What is the fill rate (gallons delivered / gallons ordered) for completed orders by tenant?"
-8. "List tenants with declining delivery volume (compare last 30 days vs previous 30 days)"
-
-**Requirements:**
-- Generates valid SQL, executes it, returns a human-readable answer (not raw rows)
-- Every query MUST be scoped to the correct tenant when a tenant is specified
-- The agent must NEVER return data from tenant B when asked about tenant A
-- Handles ambiguous queries gracefully (clarifies or states assumptions)
-- Refuses or flags queries that would expose cross-tenant data in a tenant-scoped session
-
-### Agent Capability 2: Support Ticket Triage
-
-When given a support ticket (pasted in chat or described over voice), the agent produces a structured "ticket brief" by pulling context from ALL available sources:
-
-1. **Customer profile** from `customers.json` - health score, CARR, modules active, contract end date, CSM
-2. **Dispatch data** from the database - recent delivery volume, anomalies, operational stats for this tenant
-3. **Past tickets** from `tickets.json` - history from this customer, similar issues, duplicates
-4. **Call history** from `call_transcripts.json` - recent call sentiment, topics, action items
-5. **Knowledge base** from `knowledge_base.json` - relevant articles matched by symptoms
-
-**The ticket brief must include:**
-- Customer profile summary
-- Escalation recommendation with reasoning (consider health score, CARR, contract proximity - not just ticket priority)
-- Relevant past tickets and duplicate detection
-- Relevant KB articles ranked by relevance and recency
-- Recent call context and sentiment
-- Operational snapshot from the dispatch DB
-- Suggested response draft
-
-**Test with at least 3 tickets from the provided data:**
-- A ticket from a low-health customer (health < 40) with an expiring contract
-- A ticket that appears to be a duplicate of an earlier one
-- A ticket referencing a module the customer doesn't actually have active
-
-### Agent Foundation: Data Layer + Entity Resolution
-
-Under the hood, your agent needs a data layer that:
-- Loads all sources (SQLite + JSON files) into a unified queryable system
-- Resolves entities across sources (call transcripts use tenant names/aliases, not IDs)
-- Handles fuzzy or imperfect name matches
-- Exposes a clean interface so the agent logic doesn't deal with source-level quirks
-
----
-
-## Supporting Deliverables (alongside the build)
-
-### SECURITY.md - Code Review Challenge
-
-Below is a simplified text-to-SQL endpoint. It has **three security vulnerabilities** related to multi-tenant isolation and input handling. Find them, explain the attack vector for each, and write the fixed version.
-
-```python
-from fastapi import FastAPI, Request
-import sqlite3
-import openai
-
-app = FastAPI()
-
-def get_db():
-    return sqlite3.connect("dispatch.db")
-
-@app.post("/api/query")
-async def query_dispatch(request: Request):
-    body = await request.json()
-    user_question = body["question"]
-    tenant_id = body.get("tenant_id")  # optional tenant filter
-    
-    schema = open("SCHEMA.md").read()
-    
-    prompt = f"""You are a SQL assistant. Given this schema:
-    {schema}
-    
-    Generate a SQLite query to answer: {user_question}
-    {"Filter by tenant_id = " + str(tenant_id) if tenant_id else ""}
-    Return ONLY the SQL query, nothing else."""
-    
-    response = openai.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[{"role": "user", "content": prompt}]
-    )
-    
-    sql = response.choices[0].message.content.strip()
-    
-    db = get_db()
-    results = db.execute(sql).fetchall()
-    db.close()
-    
-    return {"sql": sql, "results": results, "count": len(results)}
+```bash
+uv venv --python python3.12 .venv && uv pip install --python .venv/bin/python -r requirements-dev.txt
 ```
 
-For each vulnerability: name it, describe the specific attack scenario, and show the fix.
+Without `uv`:
 
-### DECISIONS.md - Engineering Journal
-
-Document as you build. This is not a separate essay exercise - it is a log of decisions you actually made while building the agent.
-
-**5 architecture decisions** with alternatives considered and why you chose what you chose. These should be SPECIFIC to your build, referencing actual code, data patterns, or trade-offs you encountered.
-
-**2+ data quality observations** - things you found in the data that a production system would need to handle.
-
-**Cost estimate** - what would this system cost in LLM API calls per day processing 50 tickets/day and 100 dispatch questions/day? Show token math.
-
-**Scaling question** - if this served 150 tenants with 500K+ delivery orders each: what breaks first in your pipeline? How would you enforce tenant isolation at the database level (be specific, not just "use RLS")? How would you add a new data source without modifying existing agent code?
-
-**End-customer agent question** - FleetPanda's tenants also have their own end-customers (homeowners, businesses that receive fuel deliveries). If THIS agent also needed to serve those end-customers (e.g., a homeowner calls Cascade Fuel and asks "when is my next delivery?" or "what's my tank level?"), how does the data scoping change? What should the end-customer agent see vs NOT see? How do you handle two layers of tenant isolation (FleetPanda -> tenant -> end-customer)?
-
----
-
-## Constraints
-
-- **Language:** Python required
-- **LLM:** Any provider. Include setup instructions.
-- **STT/TTS:** Any solution. Can be local (Whisper), cloud API, or browser-based. Must actually work - we will test it.
-- **Time:** 72 hours from receipt. Estimated effort: 8-10 hours.
-- **AI tools:** Use freely. We expect it. The decision journal, security explanations, and live session are how we evaluate your thinking.
-- **Frameworks:** No agent framework required. Use one only if it genuinely helps, and explain why in DECISIONS.md.
-- **Tests:** Include tests for: (a) entity resolution, (b) tenant isolation (tenant A query never returns tenant B data), (c) the 8 SQL test questions, (d) security fixes.
-
----
-
-## Deliverables
-
-```
-your-submission/
-    README.md            # Setup, how to run chat mode, how to run voice mode
-    DECISIONS.md         # Engineering journal
-    SECURITY.md          # Code review answers
-    src/                 # Source code
-    tests/               # Tests
-    requirements.txt     # or pyproject.toml
+```bash
+python3.12 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
 ```
 
-Submit as a private GitHub repo (invite us) or zip file.
+An API key is needed only to run the agent, not to run the tests:
 
----
+```bash
+cp .env.example .env
+```
 
-## What Happens After Submission
+## Run the tests
 
-**Live session (60-75 min, screen share required):**
+```bash
+.venv/bin/python -m pytest tests/ -q
+```
 
-1. **Demo** (10 min) - Show us the agent working in both chat and voice mode. Ask it a dispatch question. Triage a ticket. We want to see it run.
+94 pass, 12 skip. The skips are the agent-path tests for the eight graded
+questions; their reference-SQL counterparts run and assert real numbers today.
 
-2. **Code walkthrough** (10 min) - Walk through the ticket triage flow end to end. Show how entity resolution feeds into the SQL agent. Show tenant isolation.
+To see the isolation tests alone — the ones worth reading first:
 
-3. **Live coding** (20 min) - We will give you a new requirement and ask you to implement it in your codebase while we watch. You may use any AI tools (Cursor, Copilot, Claude, etc.) during this segment. We are evaluating how you work: how you navigate your code, how you reason about data flow, how you use AI tools, and how you extend your own system.
+```bash
+.venv/bin/python -m pytest tests/test_tenant_isolation.py tests/test_security.py -v
+```
 
-4. **Live scenario** (10 min) - We give you a multi-signal edge case and ask you to walk through what the agent should do. Tests real-time reasoning about domain-specific problems.
+## Chat mode
 
-5. **Architecture discussion** (10 min) - Scaling, end-customer agent, adding new data sources.
+Not yet implemented — `src/interfaces/cli_chat.py` is a stub. It will run as:
 
-The live session carries significant weight. Come prepared to code, not just talk.
+```bash
+.venv/bin/python -m src.interfaces.cli_chat
+```
 
----
+## Voice mode
 
-## Evaluation
+Not yet started.
 
-| Area | Weight | What we're looking for |
-|------|--------|----------------------|
-| Working agent - chat mode | 15% | Dispatch queries return correct answers, ticket briefs are rich and useful |
-| Working agent - voice mode | 10% | Speech in, speech out, same quality as chat. Handles voice-specific UX (latency, confirmation). |
-| Text-to-SQL correctness + tenant isolation | 15% | All 8 questions answered correctly, tenant scoping enforced as a hard constraint |
-| Ticket triage quality | 10% | All 5 sources used, smart escalation logic, duplicate/anomaly detection |
-| Security challenge | 10% | All 3 vulnerabilities found with specific attack scenarios |
-| DECISIONS.md | 10% | Specific trade-offs, realistic cost math, thoughtful scaling and end-customer answers |
-| Code quality + tests | 10% | Clean structure, error handling, meaningful test coverage |
-| Live session (demo + coding + scenario) | 20% | Agent works in demo, can extend own codebase live, handles curveball |
+## How tenant isolation works
 
----
+Three independent layers, none of which trusts the others:
 
-## Questions?
+1. **Read-only connection** (`src/db/connection.py`) — the database is opened with
+   `mode=ro` and `PRAGMA query_only=ON`, so a write is refused by SQLite itself
+   even if everything above it fails.
+2. **AST guard** (`src/db/guard.py`) — generated SQL is parsed with `sqlglot`,
+   validated against an allowlist, and rewritten so that every tenant-scoped table
+   reference carries `tenant_id = <session tenant>`, including inside subqueries,
+   derived tables and CTE bodies. Isolation is never asked of the prompt.
+3. **Post-execution assertion** (`src/db/executor.py`) — returned rows are checked
+   for a foreign `tenant_id`. This is a detector rather than a guarantee, and the
+   test suite says so.
 
-Email [REDACTED] with clarifying questions. Asking good questions is a positive signal.
+A tenant-scoped session refuses the four cross-tenant questions outright rather
+than narrowing them to one tenant, because a one-tenant answer presented as a
+platform ranking is a wrong answer that looks right.
+
+## Documents
+
+| File | What it is |
+|---|---|
+| [CLAUDE.md](CLAUDE.md) | The build charter. Source of truth for scope and standards. |
+| [RECON.md](RECON.md) | Step 0 data exploration. Read this first — it explains most of the design. |
+| [DECISIONS.md](DECISIONS.md) | Engineering journal, appended as decisions were made. |
+| [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md) | Session summary, and questions needing a human. |
+| [SECURITY.md](SECURITY.md) | Code-review challenge. Outline only so far. |
+
+## Layout
+
+```
+src/
+  config.py          every path, threshold and mapping, each annotated with the
+                     recon finding that produced it
+  data/
+    loaders.py       JSON -> frozen dataclasses
+    resolver.py      tenant name/alias -> tenant_id, or an honest refusal
+    sources.py       DataSource protocol + REGISTRY (add a source in one line)
+    repository.py    one read API; the single place JSON records meet a tenant
+  db/
+    connection.py    read-only sqlite
+    schema.py        introspection -> prompt schema card
+    guard.py         sqlglot AST validation + tenant predicate injection
+    executor.py      row cap, timeout, post-execution tenant assertion
+  llm/
+    client.py        thin Anthropic wrapper
+    prompts.py       every system prompt, in one file
+  agent/
+    session.py       TenantContext: who is asking, and what they may see
+    router.py        STUB   intent classification and dispatch
+    sql_agent.py     STUB   question -> guarded SQL -> answer
+    triage_agent.py  STUB   ticket -> five-source brief
+    escalation.py    STUB   deterministic scoring, no LLM
+  interfaces/
+    cli_chat.py      STUB   terminal transport
+```

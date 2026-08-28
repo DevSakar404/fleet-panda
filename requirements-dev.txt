@@ -1,0 +1,3 @@
+-r requirements.txt
+
+pytest==9.1.1         # test runner; no plugins needed, fixtures and parametrize are enough
