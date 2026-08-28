@@ -156,14 +156,15 @@ reader judge.
 silently corrected in CLAUDE.md, same reasoning as Q-001.
 **Needs you to:** nothing beyond a one-word edit to CLAUDE.md if you want the file consistent.
 
-### Q-007 · The date anchor is stated in prose, not in structured output
+### Q-007 · The date anchor is stated in prose, not in structured output — RESOLVED 2026-08-29
 **Context:** DECISIONS.md D-001. The agent answers "in the 7 days to 2026-05-29 (most recent
 data available)". That is honest for a human reader, but a downstream consumer parsing the JSON
 response has no machine-readable field telling it the window was shifted 91 days.
 **Taken:** prose only for now — no response schema exists yet at Step 3.
-**Needs you to:** decide whether the eventual response model carries an explicit
-`window_start` / `window_end` / `anchor_mode` triple. My view: yes, and voice mode should say
-the anchor out loud on the first query of a session only.
+**Resolved:** `SqlAnswer` now carries `date_anchor` and `anchor_mode` as fields (D-009).
+`window_start` / `window_end` were not added — the agent does not currently compute the
+window boundaries in Python, SQLite does, so publishing them would mean re-deriving
+them. Revisit if a consumer needs the exact bounds.
 
 ### Q-008 · LLM provider is assumed to be Anthropic
 **Context:** CLAUDE.md §7 Step 3 names `ANTHROPIC_API_KEY` specifically; §3.1 says direct
@@ -215,3 +216,20 @@ would drift from it.
 Flagging separately that I should have logged this as a question during the foundation
 session rather than silently deciding not to write it — the charter's rule is to log
 conflicts, and "the layout omits something useful" is a conflict.
+
+### Q-012 · The agent has never spoken to a real model
+**Context:** No `ANTHROPIC_API_KEY` is present in this environment, and CLAUDE.md 7
+forbade live calls during the foundation session. Every agent test is driven by
+`tests/conftest.py:FakeLLM`, primed with the reference SQL.
+**What that does and does not prove:** the plumbing is verified end to end — JSON
+parsing including markdown fences, guard rewriting, execution, the retry-with-reasons
+path, refusal before a wasted synthesis call, and the anchor reaching the synthesiser.
+What is entirely unverified is whether a real model, given `build_sql_prompt()`,
+actually produces SQL resembling `REFERENCE_SQL`. Prompt quality is untested.
+**Taken:** wrote the expectations so the acceptance test is a one-line swap —
+replace `FakeLLM` with `LLMClient` in `tests/test_sql_questions.py:_agent` and the
+assertions should hold unchanged.
+**Needs you to:** add a key and run that swap. Expect prompt iteration, particularly
+on Q2 ("last month" as a calendar month, not a rolling 30 days) and Q4 (the
+`status = 'completed'` filter, which is the difference between 1467.7 and 1564.92 and
+which no error will reveal).

@@ -174,6 +174,86 @@ the data. Mitigated by generating everything around it, so only the four
 hand-written facts are unverified.
 **Where it lives:** `src/db/schema.py:introspect` and `SchemaCard.render`.
 
+### D-007 · Two LLM calls, split so the one that writes prose cannot compute
+**Date:** 2026-08-29
+**Context:** The obvious build is one call: give the model the schema and the
+question, let it answer. The cheaper-looking variant is one call that returns SQL
+*and* a templated answer. Both put the model in a position to state a number.
+**Options considered:**
+- A. One call, model answers directly from the schema. It has no data, so it
+  hallucinates figures that look exactly like real ones.
+- B. One call returning SQL plus a prose template we fill in. No hallucinated
+  figures, but the phrasing is fixed and reads badly for the eight very different
+  questions — and it cannot say "no rows, because the data stops in May".
+- C. Two calls. The first turns a question into SQL and is the only creative step.
+  The second receives the *executed rows* and is told to use them exactly and
+  invent nothing.
+**Chosen:** C. The property worth paying a second call for is that no figure in
+any answer originates in the model — every number travelled from SQLite through
+the executor into the synthesis prompt. `test_the_synthesis_call_receives_rows_and_the_anchor_not_the_question_alone`
+pins that the rows actually arrive.
+**Trade-off accepted:** two round trips per question, which matters on the voice
+path (D-001's anchor sentence and this latency are the two things Step 5 will have
+to work around). Roughly doubles per-question token cost, which the DECISIONS cost
+model will need to reflect. A single structured call could return SQL and a
+narrative skeleton together, and is worth revisiting if voice latency is bad.
+**Where it lives:** `src/agent/sql_agent.py:SqlAgent.answer` and `_synthesise`.
+
+---
+
+### D-008 · Cross-tenant refusal is checked twice, from two different inputs
+**Date:** 2026-08-29
+**Context:** A tenant-scoped session must refuse "which tenant delivered the most
+gallons?" rather than answer it for one tenant. At runtime there is no question
+number to look up — `TenantContext.allows_question` works for the test suite and
+not for free text — so the intent has to be detected.
+**Options considered:**
+- A. Keyword heuristics on the question ("all tenants", "by tenant"). Cheap, and
+  brittle in exactly the phrasings a real user produces.
+- B. Ask the model, in the generation call it is already making, for an
+  `is_cross_tenant` flag. Free, and trusts an untrusted component with an
+  authority decision.
+- C. Inspect the generated SQL: grouping or ordering by `tenant_id` means the
+  query is shaped to return one row per tenant. Deterministic, but blind to intent
+  the SQL does not express.
+- D. B **and** C, either one sufficient to refuse.
+**Chosen:** D. They fail differently, which is the point: the flag reads the
+*question* and catches "how do we compare to the others" that the model then
+writes as a single-tenant query; the AST check reads the *SQL* and catches a
+mislabelled or adversarial generation. Requiring both to agree would mean either
+one being wrong lets the query through, so it is either-fires-refuses.
+**Trade-off accepted:** false refusals are now possible from two directions — a
+model that flags a legitimate single-tenant question, or a query that orders by
+`tenant_id` incidentally. In a SOC 2 multi-tenant system a spurious refusal is the
+right direction to be wrong in, but it is a real cost to conversational quality.
+Note also that `SELECT tenant_id` is deliberately *not* treated as cross-tenant —
+echoing the tenant back is normal — so the check keys on `GROUP BY` and `ORDER BY`
+only.
+**Where it lives:** `src/agent/sql_agent.py:_authority_check` and
+`_looks_cross_tenant`.
+
+---
+
+### D-009 · The answer carries the date window as data, not only as prose
+**Date:** 2026-08-29
+**Context:** Resolves OPEN_QUESTIONS Q-007. D-001 anchors relative windows on
+`MAX(delivery_date)` and has the agent say so in its reply. That is enough for a
+human reading a terminal and not enough for anything else.
+**Options considered:**
+- A. Prose only. Simplest. A downstream consumer has to parse English to discover
+  the numbers are 91 days old, and voice has no way to say the anchor on the first
+  answer of a session and stay quiet after.
+- B. Structured fields on the response (`date_anchor`, `anchor_mode`) alongside
+  the prose.
+**Chosen:** B, decided rather than escalated: extra fields are free to ignore and
+expensive to retrofit once the router, the CLI and the voice transport all consume
+the response type.
+**Trade-off accepted:** `SqlAnswer` grows fields that nothing reads yet, which is
+the speculative-generality smell — accepted narrowly because the staleness caveat
+is a correctness property of every relative-window answer this system gives, not a
+feature someone might want later.
+**Where it lives:** `src/agent/sql_agent.py:SqlAnswer.date_anchor` / `.anchor_mode`.
+
 ---
 
 ## Data quality observations

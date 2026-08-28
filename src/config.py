@@ -134,3 +134,17 @@ CONTRACT_RENEWAL_WINDOW_DAYS: Final[int] = 90
 # duplicate candidates. 85 comes from RECON.md section 9: at that cut the 14 pairs
 # found are all genuine refilings, and nothing unrelated is caught.
 DUPLICATE_SUBJECT_THRESHOLD: Final[float] = 85.0
+
+
+# --- SQL agent ---------------------------------------------------------------
+
+# Generation attempts before giving up. One retry, not a loop: a second guard
+# rejection usually means the question cannot be answered from this schema rather
+# than that the model was careless, and retrying past that spends tokens and
+# latency to arrive at the same refusal.
+SQL_MAX_ATTEMPTS: Final[int] = 2
+
+# Rows sent to the synthesis call. The eight graded questions all return far fewer
+# than this; the cap stops a 200-row result from dominating the prompt when the
+# answer only needs the shape of the top of it.
+SYNTHESIS_ROW_SAMPLE: Final[int] = 25

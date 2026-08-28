@@ -4,10 +4,13 @@ A voice-and-chat support agent for FleetPanda's dispatch platform. It answers
 natural-language questions about the dispatch database with hard multi-tenant
 isolation, and triages incoming support tickets against five data sources.
 
-> **Build status: foundation.** The data layer, the database layer and the tenant
-> isolation guard are complete and tested. The agent itself (routing, text-to-SQL,
-> triage) is scaffolded with specifications in each module docstring and raises
-> `NotImplementedError`. Voice mode is not started. See
+> **Build status: text-to-SQL working, agent shell pending.** The data layer, the
+> database layer, the tenant isolation guard and the SQL agent are complete and
+> tested. Routing, triage, escalation and the CLI remain stubs with specifications
+> in their module docstrings. Voice mode is not started.
+>
+> The SQL agent has not yet spoken to a real model — no API key is available here,
+> so its tests drive it with a scripted fake. See OPEN_QUESTIONS.md Q-012. See
 > [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md) for the session summary and next tasks.
 >
 > The assignment brief as received is preserved in git history at commit
@@ -39,8 +42,8 @@ cp .env.example .env
 .venv/bin/python -m pytest tests/ -q
 ```
 
-94 pass, 12 skip. The skips are the agent-path tests for the eight graded
-questions; their reference-SQL counterparts run and assert real numbers today.
+127 pass, no skips. The eight graded questions are asserted twice: once against
+hand-written reference SQL, and once end to end through the agent.
 
 To see the isolation tests alone — the ones worth reading first:
 
@@ -112,7 +115,7 @@ src/
   agent/
     session.py       TenantContext: who is asking, and what they may see
     router.py        STUB   intent classification and dispatch
-    sql_agent.py     STUB   question -> guarded SQL -> answer
+    sql_agent.py            question -> guarded SQL -> answer
     triage_agent.py  STUB   ticket -> five-source brief
     escalation.py    STUB   deterministic scoring, no LLM
   interfaces/

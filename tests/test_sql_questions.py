@@ -22,6 +22,7 @@ from __future__ import annotations
 import pytest
 
 from src.agent.session import TenantContext
+from tests.conftest import FakeLLM, sql_reply
 
 # Anchored on the data rather than on `date('now')`: the dataset ends 2026-05-29,
 # 91 days before this was written, so `date('now')` returns zero rows for four of
@@ -196,81 +197,144 @@ def test_the_date_anchor_matters(run):
     assert now_anchored.rows[0][0] == 0, "dataset appears refreshed -- revisit D-001"
 
 
-# --- 2. the agent path, skipped until Step 4 ---------------------------------
+# --- 2. the same eight questions, through the agent --------------------------
+#
+# Driven by FakeLLM primed with the reference SQL above, so these assert the
+# agent's PLUMBING end to end -- generation is parsed, the guard rewrites it, the
+# executor runs it, the anchor reaches synthesis, cross-tenant questions are
+# refused when scoped. They do NOT assert that a real model writes this SQL; that
+# needs an API key and is tracked as OPEN_QUESTIONS.md Q-012.
+#
+# When a key is available, the same expectations are the acceptance target: swap
+# FakeLLM for LLMClient and the assertions should hold unchanged.
 
-EIGHT_QUESTIONS = [
-    pytest.param(
-        1, "How many deliveries were completed in the last 7 days across all tenants?",
-        604, id="q1-completed-last-7-days",
-    ),
-    pytest.param(
-        2, "Which tenant delivered the most gallons of diesel last month?",
-        3, id="q2-top-diesel-tenant",
-    ),
-    pytest.param(
-        3, "Show me the top 5 drivers by total deliveries for tenant 3",
-        "Daryl Williams", id="q3-top-5-drivers",
-    ),
-    pytest.param(
-        4, "What is the average gallons per delivery for propane orders?",
-        1467.7, id="q4-avg-propane-gallons",
-    ),
-    pytest.param(
-        5, "How many emergency orders did tenant 4 have in the past 30 days?",
-        17, id="q5-emergency-orders",
-    ),
-    pytest.param(
-        6, "Which trucks are currently in maintenance status?",
-        6, id="q6-trucks-in-maintenance",
-    ),
-    pytest.param(
-        7, "What is the fill rate (gallons delivered / gallons ordered) for completed orders by tenant?",
-        0.9268, id="q7-fill-rate",
-    ),
-    pytest.param(
-        8, "List tenants with declining delivery volume (compare last 30 days vs previous 30 days)",
-        [4, 8, 9, 12], id="q8-declining-volume",
-    ),
-]
+REFERENCE_SQL = {
+    1: f"SELECT COUNT(*) AS deliveries FROM delivery_orders "
+       f"WHERE status = 'completed' AND delivery_date >= date({ANCHOR}, '-7 day')",
+    2: f"SELECT tenant_id, SUM(gallons_delivered) AS gallons FROM delivery_orders "
+       f"WHERE product_type = 'diesel' AND status = 'completed' "
+       f"AND strftime('%Y-%m', delivery_date) = "
+       f"strftime('%Y-%m', date({ANCHOR}, 'start of month', '-1 month')) "
+       f"GROUP BY tenant_id ORDER BY gallons DESC",
+    3: "SELECT d.name, COUNT(*) AS deliveries FROM delivery_orders o "
+       "JOIN drivers d ON o.driver_id = d.driver_id WHERE o.status = 'completed' "
+       "GROUP BY d.driver_id ORDER BY deliveries DESC LIMIT 5",
+    4: "SELECT AVG(gallons_delivered) AS avg_gallons FROM delivery_orders "
+       "WHERE product_type = 'propane' AND status = 'completed'",
+    5: f"SELECT COUNT(*) AS emergency_orders FROM delivery_orders "
+       f"WHERE priority = 'emergency' AND order_date >= date({ANCHOR}, '-30 day')",
+    6: "SELECT COUNT(*) AS n FROM trucks WHERE status = 'maintenance'",
+    7: "SELECT tenant_id, SUM(gallons_delivered) / SUM(gallons_ordered) AS fill_rate "
+       "FROM delivery_orders WHERE status = 'completed' "
+       "GROUP BY tenant_id ORDER BY fill_rate DESC",
+    8: f"WITH windows AS ("
+       f"  SELECT tenant_id,"
+       f"    SUM(CASE WHEN delivery_date > date({ANCHOR}, '-30 day') THEN 1 ELSE 0 END) AS recent,"
+       f"    SUM(CASE WHEN delivery_date > date({ANCHOR}, '-60 day')"
+       f"              AND delivery_date <= date({ANCHOR}, '-30 day') THEN 1 ELSE 0 END) AS prior"
+       f"  FROM delivery_orders WHERE status = 'completed' GROUP BY tenant_id)"
+       f" SELECT tenant_id, recent, prior, 100.0 * (recent - prior) / prior AS pct_change"
+       f" FROM windows WHERE prior > 0 ORDER BY pct_change",
+}
+
+QUESTIONS = {
+    1: "How many deliveries were completed in the last 7 days across all tenants?",
+    2: "Which tenant delivered the most gallons of diesel last month?",
+    3: "Show me the top 5 drivers by total deliveries for tenant 3",
+    4: "What is the average gallons per delivery for propane orders?",
+    5: "How many emergency orders did tenant 4 have in the past 30 days?",
+    6: "Which trucks are currently in maintenance status?",
+    7: "What is the fill rate (gallons delivered / gallons ordered) for completed orders by tenant?",
+    8: "List tenants with declining delivery volume (compare last 30 days vs previous 30 days)",
+}
+
+# The four that range over every tenant by construction. CLAUDE.md section 9
+# lists only {1, 7}; see OPEN_QUESTIONS.md Q-001.
+CROSS_TENANT = {1, 2, 7, 8}
 
 
-@pytest.mark.skip(reason="Step 4: sql_agent is a stub")
-@pytest.mark.parametrize("number, question, expected", EIGHT_QUESTIONS)
-def test_agent_answers_the_question(number, question, expected):
-    """End-to-end: question -> generated SQL -> guarded -> rows -> answer.
+def _agent(number: int, answer_text: str = "Answer."):
+    """An agent primed to produce the reference SQL for one question."""
+    from src.agent.sql_agent import SqlAgent
 
-    Ambiguities the agent must resolve, per question:
+    return SqlAgent(
+        FakeLLM(
+            sql_reply(REFERENCE_SQL[number], is_cross_tenant=number in CROSS_TENANT),
+            answer_text,
+        )
+    )
 
-      Q1  'last 7 days' -- anchored on MAX(delivery_date), not now(). 'Completed'
-          means status='completed', not 'has a delivery_date in the past'.
-      Q2  'last month' -- the last complete calendar month in the data (2026-04),
-          not a rolling 30 days. Must not join tank_readings (9x inflation).
-      Q3  'total deliveries' -- completed orders, not shifts.total_deliveries,
-          which is a different number from a different table.
-      Q4  'per delivery' -- over completed orders only. Omitting the status filter
-          silently changes what is being averaged.
-      Q5  'past 30 days' -- anchored, and on order_date (when it was placed) not
-          delivery_date, because the question is about orders.
-      Q6  'currently' -- trucks.status has no history, so 'currently' is just the
-          current row. Also the one question whose scoped and platform answers
-          both make sense; the agent should say which it gave.
-      Q7  SUM/SUM, not AVG of ratios. Completed orders only.
-      Q8  Two anchored 30-day windows, and a materiality threshold -- seven
-          tenants are technically negative and only four are meaningfully so.
 
-    Cross-tenant questions (1, 2, 7, 8) must be REFUSED in a tenant-scoped session
-    rather than answered with one tenant's rows.
+@pytest.mark.parametrize(
+    "number, first_row",
+    [
+        (1, (604,)),
+        (2, (3, 85816.6)),
+        (3, ("Daryl Williams", 91)),
+        (4, (1467.7,)),
+        (5, (17,)),
+        (6, (6,)),
+        (7, (3, 0.9268)),
+    ],
+    ids=lambda v: f"q{v}" if isinstance(v, int) else "",
+)
+def test_agent_answers_the_question(number, first_row):
+    """Question -> generation -> guard -> execution -> synthesis, asserting the
+    same numbers the reference SQL produces.
+
+    Questions 3 and 5 name a tenant and run scoped; the rest run platform-scoped.
+    Ambiguities each question must resolve are documented on the reference test
+    of the same number above.
     """
-    from src.agent.sql_agent import answer_question
+    context = (
+        TenantContext.for_tenant(3) if number == 3
+        else TenantContext.for_tenant(4) if number == 5
+        else TenantContext.platform()
+    )
+    answer = _agent(number).answer(QUESTIONS[number], context)
 
-    answer_question(question, TenantContext.platform())
+    assert not answer.refused, answer.refusal_reasons
+
+    # Element-wise rather than tuple equality: these rows mix driver names with
+    # gallons, and the float columns differ in the decimal place that matters
+    # (0.9268 for a ratio, 85816.6 for a volume). approx on the floats and exact
+    # on everything else avoids picking one rounding rule for both.
+    assert len(answer.rows[0]) == len(first_row)
+    for actual, expected in zip(answer.rows[0], first_row):
+        if isinstance(expected, float):
+            assert actual == pytest.approx(expected, rel=1e-4)
+        else:
+            assert actual == expected
+
+    assert answer.date_anchor == "2026-05-29"
 
 
-@pytest.mark.skip(reason="Step 4: sql_agent is a stub")
-@pytest.mark.parametrize("number", [1, 2, 7, 8])
+def test_agent_answers_q8_with_a_materiality_threshold():
+    """Q8 separately: the assertion is the filtered list, not the first row."""
+    from src import config
+
+    answer = _agent(8).answer(QUESTIONS[8], TenantContext.platform())
+    assert not answer.refused
+    material = [row[0] for row in answer.rows if row[3] < config.DECLINE_THRESHOLD_PCT]
+    assert material == [4, 8, 9, 12]
+
+
+@pytest.mark.parametrize("number", sorted(CROSS_TENANT))
 def test_cross_tenant_questions_are_refused_when_scoped(number):
-    """The refusal path, which is graded as heavily as the answers."""
-    from src.agent.sql_agent import answer_question
+    """The refusal path, graded as heavily as the answers.
 
-    answer_question(dict((q.values[0], q.values[1]) for q in EIGHT_QUESTIONS)[number],
-                    TenantContext.for_tenant(4))
+    Answering these in a scoped session would return one tenant's rows presented
+    as a platform-wide ranking.
+    """
+    answer = _agent(number).answer(QUESTIONS[number], TenantContext.for_tenant(4))
+
+    assert answer.refused
+    assert answer.rows == ()
+    assert any("tenant" in reason.lower() for reason in answer.refusal_reasons)
+
+
+@pytest.mark.parametrize("number", [3, 5, 6])
+def test_single_tenant_questions_are_allowed_when_scoped(number):
+    """The other side of the same coin -- scoping must not refuse everything."""
+    answer = _agent(number).answer(QUESTIONS[number], TenantContext.for_tenant(4))
+    assert not answer.refused

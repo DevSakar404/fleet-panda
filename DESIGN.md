@@ -47,7 +47,7 @@ graph TD
     PACK[context pack] --> OUT
 
     classDef stub stroke-dasharray:5 5
-    class CHAT,VOICE,ROUTE,SQLA,TRIAGE,PACK stub
+    class CHAT,VOICE,ROUTE,TRIAGE,PACK stub
 ```
 
 The two refusal paths are the interesting part and they refuse for different
