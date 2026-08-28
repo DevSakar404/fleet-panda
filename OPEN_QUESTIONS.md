@@ -2,100 +2,90 @@
 
 ## Session summary
 
-**Foundation session, 2026-08-28. Steps 0-3 complete. 94 tests pass, 12 skip
-(the agent-path tests, as scoped). Five commits, one per step plus a baseline.**
+**Updated 2026-08-29 (overnight session). Chat mode works end to end. No stubs
+remain. 198 tests pass. Eleven commits.**
 
-### What was built
+### What changed since the foundation session
 
-| Layer | Files | State |
-|---|---|---|
-| Recon | `RECON.md` | Complete — 12 sections, every claim script-derived |
-| Data | `config.py`, `data/loaders.py`, `data/resolver.py`, `data/sources.py`, `data/repository.py` | Complete, tested |
-| Database | `db/connection.py`, `db/schema.py`, `db/guard.py`, `db/executor.py` | Complete, tested |
-| Session | `agent/session.py` | Complete (pulled forward from Step 3 — the guard needs it) |
-| LLM | `llm/client.py`, `llm/prompts.py` | Complete, unexercised (no live call this session) |
-| Agent | `agent/router.py`, `sql_agent.py`, `triage_agent.py`, `escalation.py`, `interfaces/cli_chat.py` | Stubs with full specs in docstrings |
+| Built | State |
+|---|---|
+| `agent/sql_agent.py` | question → structured JSON → guard → rows → prose |
+| `agent/escalation.py` | deterministic signal scoring, no LLM |
+| `agent/triage_agent.py` | five-source fan-in → `TicketBrief` |
+| `agent/router.py` | intent classification, tenant binding, isolation on the JSON side |
+| `interfaces/cli_chat.py` | terminal transport, runs without an API key |
 
-Tenant isolation is three independent layers: a read-only connection SQLite itself
-enforces, an AST rewrite that puts `tenant_id = N` on every scoped table reference
-including subqueries and CTE bodies, and a post-execution assertion on returned
-rows. Cross-tenant questions are refused in a scoped session rather than narrowed.
+Nine decisions logged (D-007 … D-015). Test count went 94 → 198.
 
-### What recon turned up that changed the plan
+### The fix you asked for
 
-1. **The dataset ends 2026-05-29 — 91 days before today.** Anchored on
-   `date('now')`, questions 1, 2, 5 and 8 return *zero rows*. Correct SQL, useless
-   answer, and in a live demo it reads as a broken agent. Everything relative is
-   now anchored on `MAX(delivery_date)` and the agent states the anchor in its
-   reply (D-001). This was the single most consequential finding.
-2. **`token_set_ratio` scores a bare substring 100.** `"Fuel"` matches three
-   tenants at full confidence. A score-gated resolver would have leaked across
-   tenants *before any SQL exists*, where the guard cannot see it. The gate is now
-   the number of distinct tenants above threshold, not the score (D-003).
-3. **`product_area` and `modules_active` are different vocabularies.** The obvious
-   module-mismatch check flags 58 of 85 tickets; the mapped version flags 26 real
-   ones (D-002). The naive version would have looked like a working feature.
-4. **Only `tank_readings` fans out** (900 rows / 30 customers, 9.06x inflation).
-   Every other foreign key is 1:1, so Q2 and Q7 are safe provided nothing reaches
-   for it. Narrower than the charter's warning implied.
-5. **`SCHEMA.md` documents enum literals that never occur.** The schema card is
-   introspected from the live database instead (D-006).
-6. **Entity resolution against the provided data has zero failures.** The alias
-   table covers every transcript name exactly. Fuzzy matching is therefore for
-   voice and free text, not for ingest — which reframes what the resolver is for.
-7. **Ticket #1083 (tenant 4) satisfies all three mandated triage test cases at
-   once**: health 28, contract expired 2026-07-15, 4th duplicate filing in 26
-   days, and asks about `tank_monitor` which that tenant does not have.
+CRITICAL saturation is fixed (Q-013). Account signals reach 95 points where ticket
+signals reach 35, so **all twelve of tenant 4's tickets scored CRITICAL** and the
+level had stopped ranking anything. Account-state points are now capped at
+`ESCALATION_URGENT + 10`, making the rule one sentence: *a bad account is URGENT on
+its own; CRITICAL additionally requires something about this ticket.*
 
-Three bugs were found by testing rather than by reading, all in the guard, all
-silent: a sqlglot argument rename that disabled predicate injection entirely
-while still producing valid SQL; a case-sensitive allowlist against
-case-insensitive SQLite identifiers; and a schema-qualified name that could
-reference outside the opened database. The first is why there are three layers
-and not one (D-004).
+Roster distribution moved from 32 critical / 13 urgent → **16 critical / 29 urgent**.
+Tenant 4 now spreads across two levels and four distinct scores with the TankLink
+duplicate cluster correctly at the top. The first cap I tried (`CRITICAL - 1`) left
+one point of headroom and changed almost nothing — that failed attempt is recorded in
+D-012 because it is the argument for the working value.
 
-### What is stubbed
+### Four bugs found by testing rather than reading
 
-`router.py`, `sql_agent.py`, `triage_agent.py`, `escalation.py`, `cli_chat.py` —
-each raises `NotImplementedError` with its intended data flow written out in the
-module docstring. Two Step 4 design arguments are pre-made there: intent
-classification should try heuristics before spending an LLM round trip (it sits on
-the voice critical path), and KB retrieval over 12 articles does not need a vector
-database when `product_area` plus symptom overlap solves it exactly.
+1. **Ticket id extraction missed `triage 1083`** — the pattern required the word
+   "ticket". Now three patterns in descending confidence; a bare four-digit number
+   only counts when it is the whole input or follows a cue word, because every year
+   in this corpus is also four digits.
+2. **`resolve_tenant` called an unknown name "ambiguous"** — it branched on
+   candidates being present rather than on the match method, so `"Wobblegong Oil"`
+   was told it "matches more than one customer". Different failures, different
+   sentences.
+3. **Nearest-suggestion list had no floor** — `"zzzzzzzz"` got three confident
+   suggestions at score 0. Floor set at 50, measured: real typos score 67–100,
+   nonsense scores 0.
+4. **Two "last 30 days" conventions disagreed** — the triage snapshot used `>` where
+   graded question Q5 uses `>=`, quietly returning 15 emergency orders where Q5
+   asserts 17. Now pinned by a test that ties the two numbers together.
 
-`SECURITY.md` is headings only, as scoped. Voice mode is untouched.
+### What needs your attention
 
-### What needs your decision
+Sixteen questions below. In priority order:
 
-Ten questions below. The four that actually matter:
-
-- **Q-001** — CLAUDE.md §9 says questions 1 and 7 are cross-tenant; it is 1, 2, 7
-  and 8. I implemented the corrected set and left the charter unedited. *This one
-  needs a real answer before Step 4.*
-- **Q-002** — the `billing→invoicing` / `reporting→analytics` mapping is my
-  inference and drives the whole module-mismatch feature.
-- **Q-005** — the -10% materiality threshold for "declining volume" (Q8).
-- **Q-009** — `UNION` is currently rejected outright. Cheap to support, but not a
-  change to make unattended.
+- **Q-012 — the agent has never spoken to a real model.** No API key here, so every
+  agent test drives a scripted `FakeLLM`. Plumbing is verified end to end; **prompt
+  quality is entirely unverified.** Acceptance is a one-line swap in
+  `tests/test_sql_questions.py:_agent`. This is the highest-value thing left.
+- **Q-015 — a pasted ticket is recognised but not parsed.** The assignment says
+  "types a question or *pastes a ticket*"; triage works by ticket id only. This is
+  the last functional gap against the stated chat behaviour. ~1 hour.
+- **Q-001 — the cross-tenant question set.** Still unanswered. `{1,2,7,8}` is
+  implemented; CLAUDE.md §9 says `{1,7}`. One line either way.
+- **Q-002, Q-005, Q-014** — domain judgements I made and you may want to overrule
+  (the `billing→invoicing` mapping, the −10% decline cut, the escalation weights).
 
 ### Next three tasks
 
-1. **`sql_agent.py`** — question → `build_sql_prompt()` → guarded SQL → rows →
-   prose. The correctness oracle already exists: the eight reference tests in
-   `test_sql_questions.py` assert real numbers, so un-skip the agent half and work
-   until it matches. Includes one retry that feeds `GuardResult.reasons` back to
-   the model, and never retrying a `TenantIsolationError`.
-2. **`escalation.py`** — pure scoring functions with unit tests, before any triage
-   prompt exists. Signals and thresholds are enumerated in its docstring and
-   already in `config.py`. Ticket #1083 is the fixture.
-3. **`router.py` + `cli_chat.py`** — enough to demo chat mode end to end, printing
-   the guard's rewritten SQL alongside each answer. That demo is what makes the
-   isolation work visible in the live session.
+1. **Add a key and run Q-012's swap.** Expect prompt iteration on Q2 ("last month"
+   as a calendar month) and Q4 (the `status = 'completed'` filter — the difference
+   between 1467.7 and 1564.92, which no error will reveal).
+2. **Voice mode (Step 5).** `ResolutionResult.needs_confirmation` and
+   `SqlAnswer.date_anchor` already exist to drive read-back and the "as of 29 May"
+   caveat. The latency budget is the thing to design around — two LLM calls per
+   question (D-007).
+3. **SECURITY.md.** Still headings only. The three vulnerabilities are all defended
+   in code already, so this is a writing task, not a building one.
 
----
+### Try this before the demo
 
-Questions raised during the build. Per CLAUDE.md §8, none of these blocked: each was resolved
-by taking the more conservative option, and the alternative is recorded here for review.
+```
+use Fuel       -> refuses, offers three candidates
+use CFS        -> binds to tenant 1
+triage 1083    -> refused: belongs to another customer
+platform       -> then triage 1083 works
+```
+
+Four lines that walk the entire isolation story, and none of them need an API key.
 
 ---
 
