@@ -26,11 +26,22 @@ KNOWLEDGE_BASE_PATH: Final[Path] = DATA_DIR / "knowledge_base.json"
 
 # --- LLM ---------------------------------------------------------------------
 
-LLM_MODEL: Final[str] = "claude-sonnet-4-5"
+LLM_MODEL: Final[str] = "claude-opus-5"
 LLM_MAX_TOKENS: Final[int] = 2048
-# Text-to-SQL is a task where we want the same question to produce the same query
-# every time, so it can be cached and so a test that passes today passes tomorrow.
-LLM_TEMPERATURE: Final[float] = 0.0
+
+# Effort replaces temperature on current Claude models. `temperature` (and
+# top_p/top_k) are REMOVED on Opus 5 / Sonnet 5 / Opus 4.7+ and return a 400 --
+# the earlier `LLM_TEMPERATURE = 0.0` here would have failed on the first live
+# call. Determinism now comes from the parts of the system that can actually
+# guarantee it: the AST guard rewrites whatever SQL arrives, and the tests assert
+# results rather than generated text.
+#
+# Generation gets `medium`: turning "list tenants with declining volume" into a
+# two-window CTE is not a trivial translation. Synthesis gets `low`: it is handed
+# the rows and asked for two sentences, it does no arithmetic, and it sits on the
+# voice critical path where every extra second is silence.
+LLM_EFFORT_SQL: Final[str] = "medium"
+LLM_EFFORT_SYNTHESIS: Final[str] = "low"
 
 # --- Entity resolution -------------------------------------------------------
 

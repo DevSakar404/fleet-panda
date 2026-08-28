@@ -59,13 +59,19 @@ class LLMClient:
         system: str,
         user: str,
         max_tokens: int = config.LLM_MAX_TOKENS,
-        temperature: float = config.LLM_TEMPERATURE,
+        effort: str = config.LLM_EFFORT_SQL,
     ) -> LLMResponse:
-        """One turn, no history. Every caller here is stateless by design."""
+        """One turn, no history. Every caller here is stateless by design.
+
+        `effort` rather than `temperature`: sampling parameters are removed on
+        current Claude models and return a 400. `output_config.effort` is the
+        replacement lever -- it controls how much thinking the model does, which
+        is the knob that actually matters for both of this system's calls.
+        """
         message = self._client.messages.create(
             model=self._model,
             max_tokens=max_tokens,
-            temperature=temperature,
+            output_config={"effort": effort},
             system=system,
             messages=[{"role": "user", "content": user}],
         )

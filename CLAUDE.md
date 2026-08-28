@@ -282,6 +282,11 @@ aggregating silently inflates every aggregate. This produces correct-looking SQL
 with wrong numbers, and it is the single most likely way to lose the correctness
 marks. Note in RECON.md which questions are exposed to it.
 
-Note also that questions 1 and 7 are cross-tenant. In a tenant-scoped session the
-agent must refuse them; in an unscoped internal session it may answer. That
-distinction lives in `TenantContext` and must be explicit, not implicit.
+Note also that questions **1, 2, 7 and 8** are cross-tenant. In a tenant-scoped
+session the agent must refuse them; in an unscoped internal session it may answer.
+That distinction lives in `TenantContext` and must be explicit, not implicit.
+
+(Corrected 2026-08-29, was "1 and 7". Q2 "which tenant delivered the most gallons"
+and Q8 "list tenants with declining volume" range over every tenant by
+construction -- answering them scoped returns one tenant's rows presented as a
+platform-wide ranking. See OPEN_QUESTIONS.md Q-001.)

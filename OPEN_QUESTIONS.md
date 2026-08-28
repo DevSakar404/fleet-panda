@@ -89,7 +89,7 @@ Four lines that walk the entire isolation story, and none of them need an API ke
 
 ---
 
-### Q-001 · CLAUDE.md §9 undercounts the cross-tenant questions — CONFLICT WITH SOURCE OF TRUTH
+### Q-001 · CLAUDE.md §9 undercounts the cross-tenant questions — RESOLVED 2026-08-29
 **What it says:** "questions 1 and 7 are cross-tenant. In a tenant-scoped session the agent must
 refuse them."
 **What the data says:** four of the eight are cross-tenant by construction — Q1 ("across all
@@ -101,8 +101,9 @@ one.
 with a single tenant's rows and present it as a platform-wide ranking — a wrong answer that
 looks right. **CLAUDE.md was not edited**, per §1's instruction to write conflicts here rather
 than guess.
-**Needs you to:** confirm the corrected set and update CLAUDE.md §9, or tell me the documented
-set was deliberate.
+**Resolved:** you confirmed `{1, 2, 7, 8}`. CLAUDE.md §9 has been updated to match, with a
+note recording the correction. `config.CROSS_TENANT_QUESTIONS` and
+`tests/test_sql_questions.py` already carried the corrected set; nothing else changed.
 
 ### Q-002 · The `product_area` → module mapping is my inference
 **Context:** DECISIONS.md D-002. `billing→invoicing` and `reporting→analytics` are not
@@ -285,3 +286,30 @@ query") is a better error than "I do not know what you meant", and it keeps the 
 demoable with no key.
 **Needs you to:** nothing. Flagged only because it means the unmodelled CLI behaves
 subtly differently from the modelled one, which is worth knowing before a demo.
+
+### Q-017 · The model ID and sampling parameters were both stale — FIXED 2026-08-29
+**Context:** `config.LLM_MODEL` was `claude-sonnet-4-5` and `LLMClient.complete` passed
+`temperature=0.0`. Neither would have survived the first live call: that model ID is not
+current, and `temperature` / `top_p` / `top_k` are **removed** on current Claude models
+and return a 400. Every test passed throughout, because every test drives a `FakeLLM`.
+**Taken:** model is now `claude-opus-5`; `temperature` replaced with
+`output_config.effort` — `medium` for SQL generation (turning "list tenants with
+declining volume" into a two-window CTE is not a trivial translation) and `low` for
+synthesis (it is handed the rows, does no arithmetic, and sits on the voice critical
+path). Determinism now comes from the guard and from tests asserting results rather
+than generated text, which is where it was actually enforceable anyway.
+**Needs you to:** nothing, but note this is exactly the class of bug Q-012 warns about —
+the fake-LLM suite cannot catch anything about how the real API is called. Worth
+assuming there are more once you add a key.
+
+### Q-018 · Structured outputs would remove the JSON-parsing hack
+**Context:** `SqlAgent._parse_generation` strips markdown fences and hand-parses JSON
+because models fence their output despite instructions. The current API supports
+constrained structured output (`output_config.format`, or `client.messages.parse()`
+against a Pydantic model), which makes malformed output impossible rather than handled.
+**Taken:** left as is for now. The parsing path is tested, including the fence case and
+five malformed-input cases, and changing it is a contract change to `SqlGeneration`
+better done while watching real responses.
+**Needs you to:** decide when you add the key. My view: switch to `messages.parse()` with
+the existing `SqlGeneration` model — it deletes `_parse_generation` entirely and turns a
+whole class of refusal into an impossibility. Roughly 30 minutes including test updates.
