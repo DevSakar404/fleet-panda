@@ -234,7 +234,7 @@ on Q2 ("last month" as a calendar month, not a rolling 30 days) and Q4 (the
 `status = 'completed'` filter, which is the difference between 1467.7 and 1564.92 and
 which no error will reveal).
 
-### Q-013 · Escalation level saturates within a struggling account
+### Q-013 · Escalation level saturates within a struggling account — FIXED 2026-08-29
 **Context:** DECISIONS.md D-010. Account-level signals (health, contract, CARR,
 competitor) outweigh ticket-level ones (duplicates, priority, module gap), so all 12
 of tenant 4's tickets and all 9 of tenant 8's score CRITICAL. Across the roster the
@@ -246,10 +246,17 @@ mildest.
 health-28 account genuinely is critical — and `EscalationAssessment.score` still ranks
 them (t4's range is 100–135), so a queue can sort on score even where the level
 saturates.
-**Needs you to:** decide whether the brief should show the raw score alongside the
-level, and whether a queue view should sort on score rather than level. My view: show
-the score, sort on it. It costs nothing and it is the only thing that orders a
-struggling account's backlog.
+**Fixed:** capped the account-state portion of the score at `ESCALATION_URGENT + 10`
+(D-012), so account state sets an URGENT floor and only ticket-level signals reach
+CRITICAL. Tenant 4's twelve tickets now spread across two levels and four distinct
+scores, with the TankLink duplicate cluster at the top. Roster-wide the split moved
+from 32 critical / 13 urgent to 16 critical / 29 urgent.
+
+**Still worth your view:** the cap value (55) is tuned, not derived — the first
+attempt at 69 left one point of headroom and changed almost nothing. And the brief
+does not yet display `account_risk` / `ticket_risk` separately, though the assessment
+carries them; showing both would make "urgent because of the account, critical
+because of this ticket" legible at a glance.
 
 ### Q-014 · Escalation weights are calibrated by eye, not by outcomes
 **Context:** The weights in `config.py` were set by scoring all 85 tickets and

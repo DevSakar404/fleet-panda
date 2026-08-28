@@ -308,6 +308,38 @@ in the docstring, and `test_contract_signal_moves_with_the_injected_date` makes
 the dependency visible.
 **Where it lives:** `src/agent/escalation.py:score_ticket`, `today` parameter.
 
+### D-012 · Account risk raises the floor; only the ticket can reach CRITICAL
+**Date:** 2026-08-29
+**Context:** D-010's additive scorer worked at the roster level (criticals landed
+exactly on t2, t4 and t8) and failed at the account level: account signals reach 95
+points where ticket signals reach 35, so all twelve of tenant 4's tickets scored
+CRITICAL and the level could no longer rank them. A triage queue that says
+"everything from this account is the most urgent thing" has stopped triaging.
+**Options considered:**
+- A. Leave it and sort queues on the raw score. The score does still rank them
+  (t4 spanned 100-135), but the level is the thing a human reads, and a level that
+  is constant across an account is noise in the brief.
+- B. Reweight ticket signals upward. Moves the problem: it would make a duplicate
+  filing from a healthy account outrank a genuine crisis at a failing one.
+- C. Cap the account-state portion of the score, so account state sets a floor and
+  ticket-level signals decide what clears the top threshold.
+**Chosen:** C, capping at `ESCALATION_URGENT + 10`. The rule is now stateable in
+one sentence: *a bad account is URGENT on its own; CRITICAL additionally requires
+something about this ticket.*
+**Trade-off accepted:** the first cap tried was `ESCALATION_CRITICAL - 1`, which
+was almost useless — one point of headroom meant a lone "filed as high" (5 points)
+still promoted everything, and 11 of tenant 4's 12 stayed CRITICAL. The working
+value leaves 15 points of headroom, which is a tuned number and therefore a soft
+spot; it is named in `config.py` with that reasoning. Also, `score` is no longer a
+plain sum of its signals, so the audit trail now needs `account_risk`,
+`ticket_risk` and `account_risk_capped` to stay reconstructable — which the
+assessment carries and a test verifies.
+**Result:** roster distribution moved from 32 critical / 13 urgent to 16 critical /
+29 urgent, and tenant 4's twelve tickets now spread across URGENT and CRITICAL with
+the TankLink duplicate cluster correctly at the top.
+**Where it lives:** `src/agent/escalation.py:score_ticket`,
+`src/config.py:MAX_ACCOUNT_RISK_POINTS` and `ACCOUNT_LEVEL_SIGNALS`.
+
 ---
 
 ## Data quality observations

@@ -149,10 +149,18 @@ def test_heartland_escalates_despite_passing_the_health_cut(repository):
     result = assess(repository, repository.tickets_for(2)[0].ticket_id)
 
     assert result.tenant_id == 2
-    assert result.level is EscalationLevel.CRITICAL
     fired = {s.name for s in result.signals}
     assert "health_critical" not in fired, "t2 is deliberately above the critical cut"
     assert {"health_at_risk", "contract_renewal", "carr_high"} <= fired
+
+    # The claim is about composition, not about one level: five moderate signals,
+    # none of which fires CRITICAL alone, lift a routine ticket well clear of
+    # STANDARD. Account state alone caps at URGENT (D-012), so a t2 ticket reaches
+    # CRITICAL only when the ticket itself adds something -- which is the intended
+    # behaviour, not a weaker result.
+    assert result.level in (EscalationLevel.URGENT, EscalationLevel.CRITICAL)
+    assert result.account_risk == config.MAX_ACCOUNT_RISK_POINTS
+    assert result.account_risk_capped
 
 
 def test_a_healthy_account_does_not_escalate(repository):
@@ -173,14 +181,54 @@ def test_levels_span_the_whole_range_across_the_roster(repository):
 
 # --- audit trail --------------------------------------------------------------
 
-def test_the_score_is_exactly_the_sum_of_its_signals(repository):
+def test_the_score_is_the_capped_account_risk_plus_the_ticket_risk(repository):
     """The signals are the audit trail. If the score can drift from them, a
-    disputed escalation cannot be explained from the record."""
+    disputed escalation cannot be explained from the record.
+
+    Since D-012 the relationship is `min(account, cap) + ticket` rather than a
+    plain sum, and `account_risk_capped` says which of the two applied.
+    """
     for tenant_id in range(1, 13):
         for ticket in repository.tickets_for(tenant_id):
             result = score_ticket(ticket, repository, today=TODAY,
                                   volume_change_pct=DECLINE[tenant_id])
-            assert result.score == sum(s.points for s in result.signals)
+
+            raw_account = sum(s.points for s in result.account_signals)
+            assert result.ticket_risk == sum(s.points for s in result.ticket_signals)
+            assert result.account_risk == min(raw_account, config.MAX_ACCOUNT_RISK_POINTS)
+            assert result.score == result.account_risk + result.ticket_risk
+            assert result.account_risk_capped == (raw_account > config.MAX_ACCOUNT_RISK_POINTS)
+
+            if not result.account_risk_capped:
+                assert result.score == sum(s.points for s in result.signals)
+
+
+def test_account_state_alone_never_reaches_critical(repository):
+    """The property D-012 exists to create.
+
+    Every ticket carrying no ticket-level signal at all must sit below CRITICAL,
+    however bad its account is. Before the cap, all twelve of tenant 4's tickets
+    scored CRITICAL and the level could not rank them.
+    """
+    bare = [
+        r for tenant_id in range(1, 13)
+        for r in [score_ticket(t, repository, today=TODAY, volume_change_pct=DECLINE[tenant_id])
+                  for t in repository.tickets_for(tenant_id)]
+        if r.ticket_risk == 0
+    ]
+    assert bare, "expected at least one ticket with no ticket-level signal"
+    assert all(r.level is not EscalationLevel.CRITICAL for r in bare)
+
+
+def test_the_worst_account_still_spreads_across_levels(repository):
+    """Tenant 4 is the most distressed account and its twelve tickets must still
+    be rankable against each other."""
+    results = [
+        score_ticket(t, repository, today=TODAY, volume_change_pct=DECLINE[4])
+        for t in repository.tickets_for(4)
+    ]
+    assert len({r.level for r in results}) > 1
+    assert len({r.score for r in results}) > 3
 
 
 def test_every_signal_carries_a_sentence_a_human_can_read(repository):
@@ -196,11 +244,15 @@ def test_every_signal_carries_a_sentence_a_human_can_read(repository):
 def test_omitting_volume_skips_the_signal_rather_than_scoring_zero(repository):
     """'Not measured' and 'measured, no decline' are different, and only one of
     them should be absent from the brief."""
-    ticket = next(t for t in repository.tickets_for(4) if t.ticket_id == 1083)
+    # Tenant 12: account risk sits below the cap, so the extra points actually
+    # move the total. Tenant 4 is capped either way, which would make the score
+    # comparison vacuous -- the reason this test names a different tenant.
+    ticket = repository.tickets_for(12)[0]
 
     without = score_ticket(ticket, repository, today=TODAY)
     with_decline = score_ticket(ticket, repository, today=TODAY, volume_change_pct=-16.3)
 
+    assert not with_decline.account_risk_capped
     assert "volume_decline" not in {s.name for s in without.signals}
     assert "volume_decline" in {s.name for s in with_decline.signals}
     assert with_decline.score > without.score

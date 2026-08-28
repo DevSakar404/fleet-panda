@@ -208,3 +208,29 @@ WEIGHT_PRIORITY: Final[dict[str, int]] = {"urgent": 10, "high": 5, "medium": 0, 
 ESCALATION_CRITICAL: Final[int] = 70
 ESCALATION_URGENT: Final[int] = 45
 ESCALATION_ELEVATED: Final[int] = 25
+
+
+# Ceiling on the account-state portion of an escalation score (D-012).
+#
+# Without this, account signals (up to 95 points: health, contract, CARR, volume,
+# sentiment, competitor) swamp ticket signals (up to 35: duplicates, module gap,
+# priority), so every one of tenant 4's twelve tickets scored CRITICAL and the
+# level could not rank them against each other.
+#
+# The cap lands mid-URGENT rather than just under CRITICAL. Just under (69) was
+# tried first and was no better than no cap at all: it left one point of headroom,
+# so a single "filed as high" (5 points) tipped every ticket to CRITICAL and 11 of
+# tenant 4's 12 stayed identical.
+#
+# At URGENT + 10, a bad account alone is solidly URGENT, and CRITICAL needs 15+
+# points about THIS ticket -- a repeat filing (20), or an entitlement gap plus a
+# stated urgency (10 + 5). A lone "filed as high" no longer promotes anything.
+MAX_ACCOUNT_RISK_POINTS: Final[int] = ESCALATION_URGENT + 10
+
+# Which signals describe the account rather than the ticket. Named here rather
+# than inferred so the split is a stated policy, not an accident of naming.
+ACCOUNT_LEVEL_SIGNALS: Final[frozenset[str]] = frozenset({
+    "health_critical", "health_at_risk", "contract_expired", "contract_renewal",
+    "carr_high", "carr_medium", "volume_decline", "negative_sentiment",
+    "competitor_mentioned",
+})

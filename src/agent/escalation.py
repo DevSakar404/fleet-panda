@@ -60,6 +60,9 @@ class EscalationAssessment:
     level: EscalationLevel
     score: int
     signals: tuple[Signal, ...]
+    account_risk: int = 0
+    ticket_risk: int = 0
+    account_risk_capped: bool = False
     duplicate_ticket_ids: tuple[int, ...] = ()
     missing_module: str | None = None
 
@@ -70,6 +73,14 @@ class EscalationAssessment:
     @property
     def is_duplicate(self) -> bool:
         return bool(self.duplicate_ticket_ids)
+
+    @property
+    def account_signals(self) -> tuple[Signal, ...]:
+        return tuple(s for s in self.signals if s.name in config.ACCOUNT_LEVEL_SIGNALS)
+
+    @property
+    def ticket_signals(self) -> tuple[Signal, ...]:
+        return tuple(s for s in self.signals if s.name not in config.ACCOUNT_LEVEL_SIGNALS)
 
 
 def _plural(count: int, noun: str) -> str:
@@ -239,13 +250,28 @@ def score_ticket(
         signals.append(Signal("ticket_priority", priority_points,
                               f"Ticket was filed as {ticket.priority}."))
 
-    score = sum(signal.points for signal in signals)
+    # Account state raises the floor; it does not decide the ceiling.
+    #
+    # Summed unchecked, the account signals reach 95 and the ticket signals only
+    # 35, so every ticket from a struggling tenant scored CRITICAL and the level
+    # stopped ranking them -- all twelve of tenant 4's were identical. Capping the
+    # account portion just below CRITICAL means a bad account alone is URGENT, and
+    # CRITICAL additionally requires something about this particular ticket: a
+    # repeat filing, an entitlement gap, or a stated urgency. See D-012.
+    raw_account = sum(s.points for s in signals if s.name in config.ACCOUNT_LEVEL_SIGNALS)
+    ticket_risk = sum(s.points for s in signals if s.name not in config.ACCOUNT_LEVEL_SIGNALS)
+    account_risk = min(raw_account, config.MAX_ACCOUNT_RISK_POINTS)
+    score = account_risk + ticket_risk
+
     return EscalationAssessment(
         ticket_id=ticket.ticket_id,
         tenant_id=ticket.tenant_id,
         level=level_for_score(score),
         score=score,
         signals=tuple(signals),
+        account_risk=account_risk,
+        ticket_risk=ticket_risk,
+        account_risk_capped=raw_account > config.MAX_ACCOUNT_RISK_POINTS,
         duplicate_ticket_ids=tuple(t.ticket_id for t in duplicates),
         missing_module=missing_module,
     )
