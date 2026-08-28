@@ -87,6 +87,95 @@ in RECON.md §6 into `tests/test_entity_resolution.py`.
 
 ---
 
+### D-004 · Three independent isolation layers, none trusted to be sufficient
+**Date:** 2026-08-28
+**Context:** CLAUDE.md section 3.2 mandates AST enforcement. The question this
+decision settles is what else runs alongside it, and the answer came from a bug
+found while building it: sqlglot 30 renamed the `Select` node's `from` argument to
+`from_`, so `select.args.get("from")` returned `None`, `_direct_sources` yielded no
+tables, and **every query was rewritten with no tenant predicate at all**. The SQL
+parsed, executed, and returned plausible rows. A single-layer design would have
+shipped that.
+**Options considered:**
+- A. AST guard alone. Fails exactly as above, silently, on a dependency upgrade.
+- B. Guard plus read-only connection. Stops writes but not cross-tenant reads,
+  which is the leak that actually matters here.
+- C. Guard, read-only connection, **and** a post-execution assertion that no
+  returned row carries a foreign `tenant_id`.
+**Chosen:** C. The layers fail differently on purpose: layer 1 is enforced by
+SQLite and cannot be reasoned around, layer 2 understands scope and is the only
+one that can filter, layer 3 is the only one that inspects real data and therefore
+the only one that can catch a bug in layer 2.
+**Trade-off accepted:** layer 3 is a detector, not a guarantee — it can only see
+rows that came back, so an unfiltered query whose first 200 rows happen to belong
+to the bound tenant passes it. That is not hypothetical: the test asserting it
+fires initially passed for the wrong reason, because the first 50 orders in the
+table are all tenant 1's. The limitation is pinned in
+`test_the_row_assertion_is_a_detector_not_a_guarantee` so nobody mistakes layer 3
+for the primary control.
+**Where it lives:** `src/db/connection.py` (layer 1), `src/db/guard.py:SqlGuard.check`
+(layer 2), `src/db/executor.py:QueryExecutor._assert_no_foreign_tenant` (layer 3).
+
+---
+
+### D-005 · The guard traverses scopes structurally, and never indexes an arg by name
+**Date:** 2026-08-28
+**Context:** Injecting `tenant_id = N` requires knowing which tables are in which
+SELECT's scope. Two sub-decisions were contested.
+First, *how to find the tables*: `select.find_all(exp.Table)` is the obvious call
+and is wrong — it descends into subqueries, so an outer SELECT tries to filter a
+table that only exists in an inner scope, producing SQL that references an alias
+not in scope. Second, *how to reach the FROM clause*: `select.args["from"]` is the
+documented way and broke silently on a minor-version upgrade (see D-004).
+**Options considered:**
+- A. `find_all(exp.Table)` per SELECT. Simple, wrong across scopes.
+- B. `sqlglot.optimizer.scope.traverse_scope`. Correct and purpose-built, but it
+  is a second mental model to hold, and CLAUDE.md section 1 says the code has to be
+  explainable line by line under observation.
+- C. Visit every `exp.Select` in the tree, and for each, read **its own argument
+  values** for `From` and `Join` nodes by type rather than by key name.
+**Chosen:** C. Every nested SELECT is visited in its own right, so each gets a
+predicate on its own WHERE — which is what makes subqueries, derived tables and
+CTE bodies safe without any special-casing. Matching on node *type* rather than
+argument *name* means a future sqlglot rename cannot silently disable the guard,
+which is the failure mode that actually happened.
+**Trade-off accepted:** the traversal is slightly more code than `traverse_scope`
+would be, and it re-derives something the library already knows. Accepted because
+the failure mode of the library approach is opaque and the failure mode of this one
+is a test going red. Also: `UNION` is rejected outright rather than handled, since
+the root node is not a `Select` — conservative, and logged as OPEN_QUESTIONS Q-009.
+**Where it lives:** `src/db/guard.py:SqlGuard._inject_tenant_predicates` and
+`_direct_sources`.
+
+---
+
+### D-006 · The schema card is introspected, not the provided SCHEMA.md
+**Date:** 2026-08-28
+**Context:** The text-to-SQL prompt needs a schema. `data/SCHEMA.md` is 3.4KB and
+would fit whole, so pruning is not the issue — accuracy is. Recon found it
+documents `shifts.status` as three values where the data has one, and
+`customers.status` as two where the data has one (DQ-3).
+**Options considered:**
+- A. Paste `SCHEMA.md`. One line of code, and it teaches the model literals that
+  do not exist. A filter on `status = 'inactive'` then correctly returns zero rows,
+  which is indistinguishable from a bug at the UI.
+- B. Introspect structure only (`PRAGMA table_info`). Accurate but drops the enum
+  literals, which are the single most useful thing in the prompt for a text-to-SQL
+  task.
+- C. Introspect structure **and** observed distinct values for low-cardinality text
+  columns, plus a short block of facts the schema cannot express.
+**Chosen:** C, at 3.1KB rendered. The facts block carries the four things recon
+proved a model cannot infer and will otherwise get wrong: that `customers` means
+end-customers, that `created_at` is a constant, that `tank_readings` fans out 9x,
+and that `gallons_delivered` is NULL for non-completed orders.
+**Trade-off accepted:** the card costs six introspection queries per cold start
+(cached thereafter), and the facts block is hand-written prose that can drift from
+the data. Mitigated by generating everything around it, so only the four
+hand-written facts are unverified.
+**Where it lives:** `src/db/schema.py:introspect` and `SchemaCard.render`.
+
+---
+
 ## Data quality observations
 
 Anomalies found during Step 0 recon. Each names the check that surfaced it and what a
@@ -140,3 +229,11 @@ computing.
 **DQ-8 · No indexes exist on any table, including `tenant_id`.**
 Surfaced by `PRAGMA index_list` over all six tables. Harmless at 9,769 rows; it is the first
 thing that breaks at the 150-tenant / 500K-orders scale the assignment asks about.
+
+**DQ-9 · `customers.fleet_size` is 100% NULL.**
+Surfaced by the null-rate pass in `schema.py` introspection, not by the original
+recon sweep — the column was not on the list of columns the eight questions touch.
+`SCHEMA.md` documents it as "Nullable" without saying it is always null.
+*Production:* drop the column or backfill it. As it stands it is an attractive
+nuisance: a question like "which end-customers have the largest fleets?" produces
+valid SQL, no error, and an empty answer.

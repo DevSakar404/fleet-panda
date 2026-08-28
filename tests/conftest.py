@@ -23,3 +23,27 @@ def repository() -> Repository:
 def resolver() -> TenantResolver:
     """Tenant name -> tenant_id, with the production threshold."""
     return TenantResolver()
+
+
+@pytest.fixture(scope="session")
+def guard():
+    """The AST guard with the production allowlist."""
+    from src.db.guard import SqlGuard
+
+    return SqlGuard()
+
+
+@pytest.fixture(scope="session")
+def executor():
+    """Query executor over the real read-only dispatch database."""
+    from src.db.executor import QueryExecutor
+
+    return QueryExecutor()
+
+
+@pytest.fixture(scope="session")
+def all_tenant_ids() -> tuple[int, ...]:
+    """The twelve real tenant ids, from customers.json."""
+    from src.data.loaders import load_tenants
+
+    return tuple(t.tenant_id for t in load_tenants())

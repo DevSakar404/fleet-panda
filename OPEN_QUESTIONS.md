@@ -80,3 +80,28 @@ the key existing.
 **Needs you to:** nothing, unless you want a provider-agnostic wrapper. My view: don't — one
 provider, named directly, is easier to explain in the walkthrough than an abstraction with one
 implementation.
+
+### Q-009 · `UNION` queries are rejected outright
+**Context:** DECISIONS.md D-005. sqlglot parses `SELECT ... UNION SELECT ...` with an
+`exp.Union` root, and the guard only accepts an `exp.Select` root, so every UNION is
+refused with "Only SELECT statements are permitted".
+**Taken:** left as a rejection. Isolating a UNION is not hard — each arm is an
+`exp.Select` and already gets a predicate from the existing traversal — but accepting a
+root node type I have not tested against the full attack list is not a change to make
+unattended. Refusing is the conservative direction and no test question needs UNION.
+**Needs you to:** decide whether to accept `exp.Union` roots. My view: yes, in Step 4,
+with the arm-level tests written first. It is roughly a five-line change plus tests.
+
+### Q-010 · The post-execution assertion cannot see past the row cap
+**Context:** DECISIONS.md D-004. Layer 3 inspects returned rows, so a leaking query
+whose first `MAX_RESULT_ROWS` rows all belong to the bound tenant passes it. This is
+not theoretical — the test written to prove the assertion fires initially passed for
+the wrong reason, because the first 50 rows of `delivery_orders` are all tenant 1's.
+**Taken:** kept the assertion (it reliably catches the aggregate/grouped case, which is
+where a guard bug shows up first), and pinned the limitation in
+`test_the_row_assertion_is_a_detector_not_a_guarantee` so it is visible rather than
+assumed away.
+**Needs you to:** decide whether to add a cheap `COUNT(DISTINCT tenant_id)` probe on the
+unlimited query as a fourth layer. My view: not worth it — it doubles query cost to
+defend against a bug the AST tests already cover, and layer 3's job is to be a smoke
+alarm, not a second guard.
