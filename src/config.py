@@ -1,0 +1,136 @@
+"""Every path, model name, threshold and piece of domain knowledge in one place.
+
+Owned by: nothing -- this module imports nothing from the project and is imported
+by almost everything. It is deliberately the only place a magic number is allowed
+to appear (CLAUDE.md 5).
+
+Several constants here encode findings from Step 0 recon. Each one carries the
+finding that produced it, because in six weeks the number will look arbitrary and
+the comment is the only thing that says why it is what it is.
+"""
+
+from pathlib import Path
+from typing import Final
+
+# --- Paths -------------------------------------------------------------------
+
+PROJECT_ROOT: Final[Path] = Path(__file__).resolve().parent.parent
+DATA_DIR: Final[Path] = PROJECT_ROOT / "data"
+
+DISPATCH_DB_PATH: Final[Path] = DATA_DIR / "dispatch.db"
+CUSTOMERS_PATH: Final[Path] = DATA_DIR / "customers.json"
+TENANT_ALIASES_PATH: Final[Path] = DATA_DIR / "tenant_aliases.json"
+TICKETS_PATH: Final[Path] = DATA_DIR / "tickets.json"
+CALL_TRANSCRIPTS_PATH: Final[Path] = DATA_DIR / "call_transcripts.json"
+KNOWLEDGE_BASE_PATH: Final[Path] = DATA_DIR / "knowledge_base.json"
+
+# --- LLM ---------------------------------------------------------------------
+
+LLM_MODEL: Final[str] = "claude-sonnet-4-5"
+LLM_MAX_TOKENS: Final[int] = 2048
+# Text-to-SQL is a task where we want the same question to produce the same query
+# every time, so it can be cached and so a test that passes today passes tomorrow.
+LLM_TEMPERATURE: Final[float] = 0.0
+
+# --- Entity resolution -------------------------------------------------------
+
+# rapidfuzz token_set_ratio score below which a candidate is not even considered.
+# 88 sits above the highest observed *wrong* pairing in the alias index and below
+# the lowest observed right one: 'cascade fuel svcs' vs 'cascade fuel services llc'
+# scores 89, while the nearest unrelated pair ('gl fuel' vs that same string)
+# scores 73. See RECON.md section 6.
+FUZZY_MATCH_THRESHOLD: Final[float] = 88.0
+
+# How many ranked candidates to hand back when resolution fails. Voice mode reads
+# these out loud, so more than three is unusable over audio.
+MAX_RESOLUTION_CANDIDATES: Final[int] = 3
+
+# Stripped before comparison so 'Summit Energy Group Inc' matches 'Summit Energy
+# Group'. Deliberately does NOT include 'services' or 'fuel' -- those are part of
+# the real company names and stripping them would collapse distinct tenants.
+LEGAL_SUFFIXES: Final[tuple[str, ...]] = (
+    "inc", "llc", "l.l.c", "ltd", "co", "corp", "corporation", "company",
+)
+
+# --- Dispatch database -------------------------------------------------------
+
+# Introspection allowlist. A generated query naming anything outside this set is
+# rejected before execution rather than after.
+TENANT_SCOPED_TABLES: Final[frozenset[str]] = frozenset({
+    "customers", "drivers", "trucks", "delivery_orders", "shifts", "tank_readings",
+})
+
+# Every table in this database carries tenant_id (verified by introspection in
+# Step 0), so the guard has no exempt-table case to handle. Named anyway so the
+# assumption is visible and a future non-tenant table fails loudly.
+TENANT_COLUMN: Final[str] = "tenant_id"
+
+# Hard ceiling on rows returned to the LLM for synthesis. 200 rows of aggregate
+# output is already more than any of the eight questions needs; the cap exists to
+# stop a mis-generated cross join from filling the context window.
+MAX_RESULT_ROWS: Final[int] = 200
+
+# Wall-clock budget for a single query, enforced via sqlite3 progress handler.
+QUERY_TIMEOUT_SECONDS: Final[float] = 5.0
+
+# --- Date anchoring (DECISIONS.md D-001) -------------------------------------
+
+# The dataset ends 2026-05-29. Anchoring relative windows on date('now') returns
+# zero rows for questions 1, 2, 5 and 8. Anchoring on the newest row in the data
+# keeps the answers non-empty, and the agent states the anchor in its reply so the
+# reader knows the window was shifted.
+DATE_ANCHOR_MODE: Final[str] = "max_data_date"
+DATE_ANCHOR_COLUMN: Final[str] = "delivery_date"
+DATE_ANCHOR_TABLE: Final[str] = "delivery_orders"
+
+# --- The eight graded questions ----------------------------------------------
+
+# Questions that range over every tenant by construction. A tenant-scoped session
+# must refuse these rather than answer them with one tenant's rows and present the
+# result as a platform-wide ranking.
+#
+# NOTE: CLAUDE.md section 9 lists only {1, 7}. Q2 ('which tenant delivered the
+# most') and Q8 ('list tenants with declining volume') are equally cross-tenant.
+# See OPEN_QUESTIONS.md Q-001 -- the charter was left unedited, the correct set is
+# implemented here.
+CROSS_TENANT_QUESTIONS: Final[frozenset[int]] = frozenset({1, 2, 7, 8})
+
+# Below this decline a tenant is noise, not a trend. Anchored on the data, seven
+# of twelve tenants are technically negative but t1 is at -1.5%. See
+# OPEN_QUESTIONS.md Q-005.
+DECLINE_THRESHOLD_PCT: Final[float] = -10.0
+
+# --- Ticket triage domain knowledge (DECISIONS.md D-002) ---------------------
+
+# Tickets describe themselves with `product_area`; customers are entitled to
+# `modules_active`. The two vocabularies share only dispatch, pricing and
+# tank_monitor. Mapping them is what turns a 58/85 false-positive rate into 26
+# genuine entitlement gaps. billing->invoicing and reporting->analytics are
+# inferred, not documented -- see OPEN_QUESTIONS.md Q-002.
+AREA_TO_MODULE: Final[dict[str, str]] = {
+    "dispatch": "dispatch",
+    "pricing": "pricing",
+    "tank_monitor": "tank_monitor",
+    "billing": "invoicing",
+    "reporting": "analytics",
+}
+
+# Product areas that no module gates -- every tenant can file these regardless of
+# entitlement, so they can never be a module mismatch.
+UNGATED_PRODUCT_AREAS: Final[frozenset[str]] = frozenset({"integration", "login_access"})
+
+# --- Escalation signal thresholds --------------------------------------------
+
+# Health scores in customers.json run 28-91. 40 is the assignment's own cut for
+# "low health"; 60 is where the roster's middle tier starts.
+HEALTH_SCORE_CRITICAL: Final[int] = 40
+HEALTH_SCORE_AT_RISK: Final[int] = 60
+
+# A contract inside this window is a renewal conversation, which changes how a
+# support ticket should be handled regardless of its stated priority.
+CONTRACT_RENEWAL_WINDOW_DAYS: Final[int] = 90
+
+# Two tickets with subjects this similar, from the same tenant, are treated as
+# duplicate candidates. 85 comes from RECON.md section 9: at that cut the 14 pairs
+# found are all genuine refilings, and nothing unrelated is caught.
+DUPLICATE_SUBJECT_THRESHOLD: Final[float] = 85.0
