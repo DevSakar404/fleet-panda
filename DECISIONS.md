@@ -340,6 +340,63 @@ the TankLink duplicate cluster correctly at the top.
 **Where it lives:** `src/agent/escalation.py:score_ticket`,
 `src/config.py:MAX_ACCOUNT_RISK_POINTS` and `ACCOUNT_LEVEL_SIGNALS`.
 
+### D-013 · KB retrieval is a join with a tie-break, not a vector search
+**Date:** 2026-08-29
+**Context:** The assignment asks for "relevant KB articles ranked by relevance and
+recency", and the reflex answer is embeddings plus a vector store. The corpus is
+**twelve articles**.
+**Options considered:**
+- A. ChromaDB + `sentence-transformers`. A ~90MB model download, a torch
+  dependency, an index to build and explain, to rank twelve documents. It also
+  invites "why did you add a vector database for twelve articles?" in the
+  architecture discussion, and there is no good answer.
+- B. Embeddings without the store -- numpy cosine over twelve vectors. Cheaper,
+  still needs an embedding model and an API call per ticket.
+- C. `product_area` equality for relevance, symptom-token overlap as the
+  tie-break, `updated_at` to break remaining ties.
+**Chosen:** C. `product_area` is a literal that tickets and articles genuinely
+share -- unlike `product_area` vs `modules_active`, which needed D-002's mapping --
+so this is a join, not a semantic-similarity problem. It picks KB-003 (TankLink
+connectivity) for the TankLink ticket, which is the right answer, with no model and
+no network call.
+**Trade-off accepted:** it cannot match a paraphrase that shares no words and no
+area -- a ticket saying "gauge readings frozen" would miss a tank_monitor article
+about "readings not updating" if the areas differed. At twelve articles that gap is
+inspectable; at several hundred it would not be, and embeddings become the right
+answer. The threshold to revisit is roughly when the KB stops fitting in one
+prompt.
+**Where it lives:** `src/agent/triage_agent.py:find_kb_articles`, weights in
+`src/config.py`.
+
+---
+
+### D-014 · The operational snapshot uses fixed SQL, not the SQL agent
+**Date:** 2026-08-29
+**Context:** The triage brief needs four dispatch numbers (completed last 30, prior
+30, emergency count, open orders). `sql_agent` exists and could answer them from
+natural language.
+**Options considered:**
+- A. Route them through `sql_agent`. Reuses the pipeline, and spends four LLM
+  round trips per brief on four questions that never change, each with its own
+  chance of generating something the guard rejects.
+- B. Query the database directly, bypassing the guard. Fastest, and puts an
+  unguarded query path in a system whose entire claim is that there isn't one.
+- C. Fixed SQL strings, run through the same `QueryExecutor` and guard with a
+  `TenantContext.for_tenant(...)`.
+**Chosen:** C. These are known questions, not natural-language ones, so the LLM
+adds latency, cost and a failure mode for no gain. Routing them through the guard
+anyway means the tenant predicate is injected exactly as it would be for a typed
+question -- the snapshot is not a privileged path.
+**Trade-off accepted:** four hand-written queries now live in the triage agent
+rather than in the db layer, so a schema change touches two files. Accepted because
+moving them to `db/` would create a module whose only job is to hold four strings.
+Also noted while writing it: a single-window "past 30 days" reads inclusively
+(`>=`) while two adjacent windows must not both claim the boundary day (`>` and
+`<=`). Using `>` for the emergency count quietly returned 15 where the graded
+question Q5 asserts 17 — two numbers in one system disagreeing. Now pinned by
+`test_the_snapshot_agrees_with_the_graded_question`.
+**Where it lives:** `src/agent/triage_agent.py:TriageAgent.operational_snapshot`.
+
 ---
 
 ## Data quality observations

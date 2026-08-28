@@ -234,3 +234,29 @@ ACCOUNT_LEVEL_SIGNALS: Final[frozenset[str]] = frozenset({
     "carr_high", "carr_medium", "volume_decline", "negative_sentiment",
     "competitor_mentioned",
 })
+
+
+# --- Ticket triage -----------------------------------------------------------
+
+# KB articles shown in a brief. 12 articles exist in total; three is what a CSM
+# will actually read before picking up the phone.
+KB_MAX_ARTICLES: Final[int] = 3
+
+# Relevance scoring for KB retrieval (D-013). A shared product_area is a strong
+# signal on its own -- the two vocabularies agree here, unlike product_area vs
+# modules_active -- and symptom overlap breaks ties within an area.
+KB_AREA_MATCH_POINTS: Final[int] = 10
+KB_SYMPTOM_MATCH_POINTS: Final[int] = 4
+KB_TITLE_MATCH_POINTS: Final[int] = 2
+
+# Words too common in this corpus to carry meaning when matching symptoms.
+KB_STOPWORDS: Final[frozenset[str]] = frozenset({
+    "the", "a", "an", "is", "are", "not", "no", "and", "or", "for", "to", "in",
+    "on", "of", "it", "this", "that", "with", "was", "were", "has", "have", "been",
+    "since", "all", "any", "but", "when", "showing", "shows", "getting", "cannot",
+})
+
+# Past tickets and calls included in a brief. Enough for context, few enough that
+# the prompt stays small and the CSM can scan it.
+BRIEF_MAX_PAST_TICKETS: Final[int] = 5
+BRIEF_MAX_CALLS: Final[int] = 3
