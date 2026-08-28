@@ -481,3 +481,291 @@ recon sweep — the column was not on the list of columns the eight questions to
 *Production:* drop the column or backfill it. As it stands it is an attractive
 nuisance: a question like "which end-customers have the largest fleets?" produces
 valid SQL, no error, and an empty answer.
+
+---
+
+## Cost estimate
+
+**Workload:** 50 ticket triages/day and 100 dispatch questions/day, as specified.
+**Method:** measured, not guessed — prompt sizes come from `build_sql_prompt()` and
+`build_triage_payload()` on real ticket #1083, converted at ~3.7 chars/token for
+this JSON-and-prose mix. Rerun with `messages.count_tokens` once a key exists;
+expect the estimate to move by 10–15%, not by a multiple.
+
+### Per-call token math
+
+A dispatch question costs **two** calls (D-007: the model that writes prose is
+never in a position to compute a number).
+
+| Call | Input | Output |
+|---|---:|---:|
+| SQL generation — system prompt with schema card 1,165 + question ~15 | 1,180 | 120 |
+| Synthesis — system prompt 184 + rows payload ~92 | 276 | 90 |
+| **Per question** | **1,456** | **210** |
+
+A ticket triage costs **one** call. Everything deterministic — the five-source
+gather, escalation scoring, KB matching — is computed in Python first, so the model
+receives a finished context pack and writes three prose sections.
+
+| Call | Input | Output |
+|---|---:|---:|
+| Narration — system prompt 196 + context pack 1,144 | 1,340 | 350 |
+
+### Daily totals
+
+| | Input | Output |
+|---|---:|---:|
+| 100 questions | 145,600 | 21,000 |
+| 50 triages | 67,000 | 17,500 |
+| **Total/day** | **212,600** | **38,500** |
+
+### Cost at current list prices
+
+| Model | $/day | $/month | $/year |
+|---|---:|---:|---:|
+| Claude Opus 5 ($5 / $25 per MTok) | $2.03 | $60.77 | $739 |
+| Claude Sonnet 5 ($2 / $10) | $0.81 | $24.31 | $296 |
+| Claude Haiku 4.5 ($1 / $5) | $0.41 | $12.15 | $148 |
+
+**Roughly $61/month on Opus 5** — against 12 tenants paying $30k–$96k CARR each
+(~$756k total), this is 0.008% of revenue. Cost is not the constraint at this
+scale; correctness is. That is the actual argument for defaulting to the strongest
+model rather than the cheapest.
+
+### The cheapest available optimisation
+
+The 1,165-token SQL system prompt is **byte-identical on all 100 questions per
+day** — it is the introspected schema card, which changes only when the schema
+does. Prompt caching it (write at ~1.25×, reads at ~0.1×) drops input from 212,600
+to ~109,090 tokens/day: **$2.03 → $1.51/day, 26% cheaper**, one `cache_control`
+parameter. It also cuts latency on the voice path, which matters more.
+
+Two caveats: the minimum cacheable prefix is ~1024 tokens and the card is 1,165, so
+it only just qualifies — trimming the card would silently disable caching. And the
+card must be rendered identically every call; introspection is already `lru_cache`d,
+so this holds today.
+
+### What this model does not include
+
+STT/TTS for voice mode (unpriced — `faster-whisper` and `edge-tts` run locally, so
+the cost is compute, not API), retries (~1 in N questions triggers the guard-
+rejection retry, adding one generation call), and the intent classifier, which is
+free in the common case because `Router.classify` resolves unambiguous input with
+heuristics and only calls the model when genuinely stuck.
+
+---
+
+## Scaling: 150 tenants, 500K+ delivery orders each
+
+That is **75M+ rows** in `delivery_orders` against 9,769 today — a 7,700× increase.
+
+### What breaks, in the order it breaks
+
+1. **The absence of indexes.** There is not one index on any table, including on
+   `tenant_id` (RECON.md §12). Every query is a full scan. At 9,769 rows that is
+   sub-millisecond and invisible; at 75M it is the whole problem, and it arrives
+   before anything else on this list.
+
+2. **The date anchor becomes the second full scan.** D-001 anchors every relative
+   window on `(SELECT MAX(delivery_date) FROM delivery_orders)`. That is a
+   correctness fix that costs a full-table aggregate *per query*, and at 75M rows
+   it doubles the damage from (1). Fix: materialise the anchor (a one-row
+   `data_freshness` table, or a cached value refreshed on ingest) rather than
+   recomputing it. This is the clearest example of a decision that is right at
+   fixture scale and wrong at production scale.
+
+3. **Schema-card introspection at cold start.** `src/db/schema.py` runs `COUNT(*)`
+   per table plus a null-count aggregate *per column* — around 40 full scans. It is
+   `lru_cache`d to once per process, but that is minutes of cold start on 75M rows,
+   and it will look like a hung deploy. Fix: read `pg_stats`/`pg_class` estimates
+   instead of exact counts; nothing in the prompt needs an exact row count.
+
+4. **SQLite itself.** One writer, no network access, no roles, no row-level
+   security. The isolation guarantee below cannot be built on it. Postgres.
+
+5. **In-memory JSON loading.** `Repository` loads every ticket and transcript into
+   the process and indexes them by tenant on first access. 95KB today; at 150
+   tenants with proportional history it is a database table, not a file. The
+   `DataSource` protocol survives this — `load()` becomes a query — but
+   `_index_by_tenant` (which indexes the *whole corpus* to serve one tenant) has to
+   become a `WHERE tenant_id = ?`.
+
+6. **The O(n²) bits.** `find_duplicates` compares a ticket against every other
+   ticket for that tenant with `token_set_ratio`. Fine at ~7 tickets/tenant;
+   quadratic in tickets per tenant. Fix: block on `product_area` first, then trigram
+   index (`pg_trgm`) for the similarity search. `find_kb_articles` scans all
+   articles linearly — fine at 12, and the point at which it stops being fine is
+   also the point at which D-013's "no vector store" decision should be revisited.
+
+### Enforcing tenant isolation at the database level
+
+Application-layer AST rewriting is the right control for *this* build — it is
+testable, portable, and it caught real bugs. At 150 tenants it should become a
+second line of defence rather than the only one, because it depends on `sqlglot`
+parsing SQLite exactly as SQLite executes it (SECURITY.md, residual risk).
+
+Concretely, on Postgres:
+
+```sql
+ALTER TABLE delivery_orders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE delivery_orders FORCE  ROW LEVEL SECURITY;
+
+CREATE POLICY tenant_isolation ON delivery_orders
+  USING (tenant_id = current_setting('app.tenant_id')::int);
+```
+
+The details that actually decide whether this works:
+
+- **`FORCE` is not optional.** Without it, RLS is bypassed by the table owner. An
+  app connecting as the owner — the default in most deployments — gets no isolation
+  at all and no error saying so.
+- **The application role must be `NOBYPASSRLS` and must not own the tables.**
+  Superuser and `BYPASSRLS` roles ignore policies entirely. Migrations run as owner;
+  the app never does.
+- **`SET LOCAL`, never `SET`.** This is the one that bites. `SET app.tenant_id`
+  persists for the *session*, and every production deployment puts a connection
+  pooler in front of Postgres. Under PgBouncer in transaction mode, the next request
+  to borrow that connection inherits the previous request's tenant — a cross-tenant
+  leak that appears only under load and is invisible in a single-tenant test.
+  `SET LOCAL` scopes it to the transaction, which is exactly the pooler's unit of
+  reuse. Every query must therefore run inside an explicit transaction.
+- **The policy needs an index to be usable.** RLS appends a predicate; it does not
+  make it fast. Composite indexes leading with `tenant_id`
+  (`(tenant_id, delivery_date)`, `(tenant_id, status, product_type)`) serve both the
+  policy and the eight questions.
+- **Partition the largest tables by `tenant_id`** (hash for even spread, list if a
+  few tenants dominate). This converts isolation into partition pruning — the
+  planner stops reading other tenants' data rather than filtering it — and makes
+  per-tenant retention and restore a partition operation.
+- **Keep the AST guard anyway.** It enforces things RLS does not: the table
+  allowlist, the forced `LIMIT`, the refusal of `PRAGMA`/`ATTACH`/DDL, and the
+  cross-tenant *question* refusal, which is a policy decision about scope rather
+  than a row filter. It is also the only layer covering the JSON sources, where
+  `Router` already has to make the same call for ticket triage.
+
+Belt and braces at the boundary: `_assert_no_foreign_tenant` stays, and in Postgres
+it can be strengthened cheaply — set the session's `app.tenant_id` and have a
+`SECURITY DEFINER` health check verify a known-foreign row is invisible, as a
+canary run at deploy rather than per query.
+
+### Adding a data source without modifying agent code
+
+This is what `src/data/sources.py` exists for. A source implements three things —
+its name, how to load, and how to find a record's tenant — and is added with one
+line in `REGISTRY`. `Repository._index_by_tenant` iterates the registry, so tenant
+filtering applies to a new source the moment it is registered, with no change to
+the filtering code. `ResolvedNameSource` proves the seam is real: call transcripts
+carry a tenant *name* rather than an id, and that difference is contained entirely
+within the source class.
+
+Honest limits, because "no agent changes" is not the whole truth:
+
+- **The data layer is genuinely free.** `records_for("new_source", tenant_id)` works
+  immediately.
+- **The triage brief is not.** `TicketContext` names its five sources as fields, so
+  a sixth needs a field there and a line in `build_triage_payload`. That is two
+  small edits in known places rather than a refactor, but it is not zero.
+- **Retrieval strategy is per-source.** KB articles are ranked by product area;
+  a new source needs its own relevance rule.
+
+If a sixth source were a hard requirement, the fix is to make `TicketContext` hold
+`dict[str, tuple[Any, ...]]` keyed by source name instead of five named fields —
+which trades the type safety and readability that make the current version
+explainable. At five sources, named fields are the better trade; the registry is
+where the extensibility that actually matters already lives.
+
+---
+
+## The end-customer agent: two layers of tenant isolation
+
+Today there is one boundary: FleetPanda serves 12 tenants, and a session is either
+scoped to one or is internal. Serving end-customers — a homeowner asking "when is
+my next delivery?" — adds a second boundary *inside* each tenant, and the two are
+not symmetrical.
+
+### How the scoping changes
+
+`TenantContext` grows a third scope rather than a parallel system:
+
+```python
+class SessionScope(Enum):
+    PLATFORM      = "platform"        # FleetPanda internal
+    TENANT        = "tenant"          # a fuel company's staff
+    END_CUSTOMER  = "end_customer"    # a fuel company's customer
+```
+
+The guard already takes its predicate from the context rather than from the caller,
+so an end-customer scope injects **two** predicates on every scoped table —
+`tenant_id = T AND customer_id = C` — through the same `_inject_tenant_predicates`
+traversal. That is the payoff from D-005: the mechanism does not change, only what
+it injects.
+
+But a second predicate is not sufficient, for two reasons.
+
+### The table allowlist must shrink, not just the rows
+
+`customer_id` exists on `delivery_orders`, `customers` and `tank_readings`. It does
+**not** exist on `drivers`, `trucks` or `shifts` — those are the tenant's
+operations, not any customer's. Injecting `customer_id` there is impossible, and
+injecting only `tenant_id` would expose Cascade's entire driver roster and fleet to
+one of Cascade's customers.
+
+So `END_CUSTOMER` scope needs its own allowlist — `delivery_orders`, `customers`,
+`tank_readings` — and a join to `drivers` must be refused rather than filtered. The
+current guard has one allowlist for all scopes; making it scope-dependent is a
+small change (`SqlGuard.__init__` already takes `allowed_tables`) and a large
+security property.
+
+### What an end-customer may and may not see
+
+| May see | Must not see |
+|---|---|
+| Their own orders: date, status, gallons, address | Any other end-customer of the same tenant |
+| Their own tank readings and days-to-empty | Driver names, truck labels, shift schedules |
+| Their next scheduled delivery | What the tenant pays FleetPanda, or the tenant's health score |
+| Their own order history and volumes | Per-gallon pricing paid by other customers |
+| | Anything at all about the other 149 tenants |
+
+The subtle one is **aggregates**. "What's the average delivery size?" is a
+reasonable CSM question and a disclosure when a homeowner asks it — with
+`customer_id` injected it covers only their own rows, which is correct, but the
+failure mode if the second predicate is ever missed is an answer that looks
+plausible and is built from their neighbours' data. This is why the post-execution
+assertion must also check `customer_id`, not just `tenant_id`.
+
+### Identity is the hard part, and it is harder over voice
+
+Tenant resolution can be fuzzy because a rep saying "Cascade" is asking about a
+company they already have authority over — the resolver's job there is convenience,
+and D-003 makes it fail closed on ambiguity anyway.
+
+**End-customer resolution must never be fuzzy.** A homeowner calling their fuel
+company cannot be identified by name matching: names collide, speech-to-text
+mangles them, and a wrong match discloses a stranger's address and delivery
+schedule to whoever is on the phone. Concretely:
+
+- Identify from the channel, not the conversation — ANI/verified caller ID, an
+  authenticated portal session, or a signed link from an email.
+- Where that is unavailable, require an account number **plus** a second factor the
+  caller must supply rather than confirm. Never read back a candidate ("I have you
+  at 14 Elm Street — is that right?"), because that discloses the data the check was
+  meant to protect.
+- Fail closed to a human. An unidentified end-customer gets transferred, not
+  guessed at. `ResolutionResult.needs_confirmation` already models this distinction;
+  for end-customers the threshold is simply "exact or nothing".
+
+### Two more things that are not data scoping
+
+- **The tenant owns the relationship, not FleetPanda.** The agent answers as
+  Cascade Fuel Services. Branding, tone, escalation paths, what it may promise
+  about a delivery, and data-retention policy are all per-tenant configuration —
+  which means a `tenant_id` on the *prompt*, not just on the query.
+- **The blast radius is different.** A bug in the CSM agent shows a FleetPanda
+  employee the wrong internal data. A bug in the end-customer agent shows a member
+  of the public another member of the public's home address. That asymmetry argues
+  for shipping end-customer access on a deliberately narrow surface — a handful of
+  templated intents ("next delivery", "tank level", "recent orders") backed by
+  fixed, reviewed queries — rather than by pointing general text-to-SQL at it. The
+  text-to-SQL path is the right tool for a trusted internal user exploring data; it
+  is more machinery than the question deserves when the question is always one of
+  four things and the cost of being wrong is highest.

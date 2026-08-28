@@ -48,33 +48,49 @@ D-012 because it is the argument for the working value.
    graded question Q5 uses `>=`, quietly returning 15 emergency orders where Q5
    asserts 17. Now pinned by a test that ties the two numbers together.
 
+### Since you went to sleep
+
+- **Q-001 resolved** — you chose `{1, 2, 7, 8}`; CLAUDE.md §9 updated to match.
+- **SECURITY.md written** — three vulnerabilities with attack scenarios, fixes
+  pointing at the code and tests that implement them, seven secondary issues, and an
+  explicit residual-risk section.
+- **DECISIONS.md completed** — cost model with measured token math, the 150-tenant
+  scaling answer, and the end-customer agent answer. That closes every DECISIONS.md
+  requirement in the assignment.
+- **Q-017 fixed** — `config.LLM_MODEL` was `claude-sonnet-4-5` (not a current model
+  ID) and the client passed `temperature=0.0` (removed on current models, returns
+  400). **Both would have failed on your first live call**, and the whole suite
+  passed throughout because every test drives a fake. Now `claude-opus-5` with
+  `output_config.effort`.
+
 ### What needs your attention
 
-Sixteen questions below. In priority order:
+Eighteen questions below. In priority order:
 
-- **Q-012 — the agent has never spoken to a real model.** No API key here, so every
-  agent test drives a scripted `FakeLLM`. Plumbing is verified end to end; **prompt
-  quality is entirely unverified.** Acceptance is a one-line swap in
-  `tests/test_sql_questions.py:_agent`. This is the highest-value thing left.
-- **Q-015 — a pasted ticket is recognised but not parsed.** The assignment says
-  "types a question or *pastes a ticket*"; triage works by ticket id only. This is
-  the last functional gap against the stated chat behaviour. ~1 hour.
-- **Q-001 — the cross-tenant question set.** Still unanswered. `{1,2,7,8}` is
-  implemented; CLAUDE.md §9 says `{1,7}`. One line either way.
-- **Q-002, Q-005, Q-014** — domain judgements I made and you may want to overrule
-  (the `billing→invoicing` mapping, the −10% decline cut, the escalation weights).
+- **Q-012 — the agent has never spoken to a real model.** Still the biggest unknown.
+  Q-017 is proof of the category: nothing in a fake-LLM suite can catch how the real
+  API is called. Assume there are more once the key is in.
+- **Q-015 — a pasted ticket is recognised but not parsed.** Last functional gap
+  against the assignment's stated chat behaviour. ~1 hour.
+- **Q-018 — structured outputs** would delete the fence-stripping JSON parser
+  entirely and turn a class of refusal into an impossibility. ~30 minutes, best done
+  while watching real responses.
+- **Q-002, Q-005, Q-014** — domain judgements you may want to overrule (the
+  `billing→invoicing` mapping, the −10% decline cut, the escalation weights).
 
 ### Next three tasks
 
-1. **Add a key and run Q-012's swap.** Expect prompt iteration on Q2 ("last month"
-   as a calendar month) and Q4 (the `status = 'completed'` filter — the difference
-   between 1467.7 and 1564.92, which no error will reveal).
-2. **Voice mode (Step 5).** `ResolutionResult.needs_confirmation` and
-   `SqlAnswer.date_anchor` already exist to drive read-back and the "as of 29 May"
-   caveat. The latency budget is the thing to design around — two LLM calls per
-   question (D-007).
-3. **SECURITY.md.** Still headings only. The three vulnerabilities are all defended
-   in code already, so this is a writing task, not a building one.
+1. **Add the key, then work Q-012 and Q-018 together.** Swap `FakeLLM` for
+   `LLMClient` in `tests/test_sql_questions.py:_agent` and iterate. Expect trouble on
+   Q2 ("last month" as a calendar month, not rolling 30 days) and Q4 (the
+   `status = 'completed'` filter — the difference between 1467.7 and 1564.92, which
+   no error will ever reveal).
+2. **Voice mode (Step 5).** The only remaining assignment deliverable with nothing
+   built. `ResolutionResult.needs_confirmation` and `SqlAnswer.date_anchor` already
+   exist to drive read-back and the "as of 29 May" caveat. Design around the latency
+   budget: two LLM calls per question (D-007), and prompt-caching the schema card
+   (worth 26% of cost and more of the latency) is the cheapest win.
+3. **Q-015 pasted tickets**, which finishes chat mode.
 
 ### Try this before the demo
 
