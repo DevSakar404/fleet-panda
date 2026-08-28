@@ -4,10 +4,11 @@ A voice-and-chat support agent for FleetPanda's dispatch platform. It answers
 natural-language questions about the dispatch database with hard multi-tenant
 isolation, and triages incoming support tickets against five data sources.
 
-> **Build status: text-to-SQL working, agent shell pending.** The data layer, the
-> database layer, the tenant isolation guard and the SQL agent are complete and
-> tested. Routing, triage, escalation and the CLI remain stubs with specifications
-> in their module docstrings. Voice mode is not started.
+> **Build status: text-to-SQL and escalation working, agent shell pending.** The
+> data layer, the database layer, the tenant isolation guard, the SQL agent and
+> escalation scoring are complete and tested. Routing, the triage pipeline and the
+> CLI remain stubs with specifications in their module docstrings. Voice mode is
+> not started.
 >
 > The SQL agent has not yet spoken to a real model — no API key is available here,
 > so its tests drive it with a scripted fake. See OPEN_QUESTIONS.md Q-012. See
@@ -42,7 +43,7 @@ cp .env.example .env
 .venv/bin/python -m pytest tests/ -q
 ```
 
-127 pass, no skips. The eight graded questions are asserted twice: once against
+148 pass, no skips. The eight graded questions are asserted twice: once against
 hand-written reference SQL, and once end to end through the agent.
 
 To see the isolation tests alone — the ones worth reading first:
@@ -117,7 +118,7 @@ src/
     router.py        STUB   intent classification and dispatch
     sql_agent.py            question -> guarded SQL -> answer
     triage_agent.py  STUB   ticket -> five-source brief
-    escalation.py    STUB   deterministic scoring, no LLM
+    escalation.py           deterministic scoring, no LLM
   interfaces/
     cli_chat.py      STUB   terminal transport
 ```

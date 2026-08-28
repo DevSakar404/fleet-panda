@@ -148,3 +148,63 @@ SQL_MAX_ATTEMPTS: Final[int] = 2
 # than this; the cap stops a 200-row result from dominating the prompt when the
 # answer only needs the shape of the top of it.
 SYNTHESIS_ROW_SAMPLE: Final[int] = 25
+
+
+# --- Escalation scoring weights (DECISIONS.md D-010) -------------------------
+#
+# Points, not probabilities. The scale is arbitrary but the ORDER is not, and the
+# order is the argument: an expired contract on a healthy account outranks a
+# routine ticket from a struggling one, and no single signal reaches CRITICAL
+# alone. Calibrated against the real roster -- health runs 28-91 and CARR runs
+# 30k-96k in even 6k steps, so the tiers below split a roster that has no natural
+# clusters in it.
+
+# Account health. The assignment's own cut for "low health" is 40.
+WEIGHT_HEALTH_CRITICAL: Final[int] = 30      # health < 40  (t4, t8)
+WEIGHT_HEALTH_AT_RISK: Final[int] = 15       # health < 60  (t2, t7, t11)
+
+# Contract. Deliberately weighted near health: t2 Heartland has health 45 -- above
+# the "low health" cut -- and a contract expiring 2026-08-30. A health-only rule
+# never surfaces the most time-critical account on the roster.
+WEIGHT_CONTRACT_EXPIRED: Final[int] = 25
+WEIGHT_CONTRACT_RENEWAL_WINDOW: Final[int] = 18
+
+# Revenue at risk. The same ticket text from t3 (96k) and t11 (30k) is not the
+# same ticket.
+CARR_HIGH: Final[int] = 72_000               # top third of the roster
+CARR_MEDIUM: Final[int] = 54_000
+WEIGHT_CARR_HIGH: Final[int] = 15
+WEIGHT_CARR_MEDIUM: Final[int] = 8
+
+# Repeat filings. A 4th report of the same subject in 26 days (t4's TankLink
+# cluster) is a different problem from a 1st, and one of those four was CLOSED and
+# refiled twice after -- so 'closed' is not treated as terminal (DQ-7).
+DUPLICATE_CLUSTER_SIZE: Final[int] = 3
+WEIGHT_DUPLICATE_CLUSTER: Final[int] = 20
+WEIGHT_DUPLICATE: Final[int] = 10
+
+# Entitlement gap: a sales/enablement signal rather than a bug. Scored low on
+# purpose -- it changes who should handle the ticket more than how urgent it is.
+WEIGHT_MODULE_MISMATCH: Final[int] = 10
+
+# Operational decline over DECLINE_THRESHOLD_PCT. The two steepest decliners (t4,
+# t8) are also the two lowest health scores; when the operational and CRM signals
+# agree the account is genuinely moving, not just unhappy.
+WEIGHT_VOLUME_DECLINE: Final[int] = 15
+
+# Call signals. competitor_mentioned outweighs sentiment: 7 of 43 transcripts
+# carry it, it is unambiguous, and it is the cheapest churn signal in the corpus.
+WEIGHT_NEGATIVE_SENTIMENT: Final[int] = 10
+WEIGHT_COMPETITOR_MENTIONED: Final[int] = 15
+RECENT_CALL_COUNT: Final[int] = 3            # how many recent calls count as "recent"
+
+# The ticket's own stated priority contributes but never dominates -- the
+# assignment asks for escalation that considers health, CARR and contract
+# proximity "not just ticket priority".
+WEIGHT_PRIORITY: Final[dict[str, int]] = {"urgent": 10, "high": 5, "medium": 0, "low": 0}
+
+# Level thresholds. CRITICAL needs several signals agreeing; nothing single
+# reaches it.
+ESCALATION_CRITICAL: Final[int] = 70
+ESCALATION_URGENT: Final[int] = 45
+ESCALATION_ELEVATED: Final[int] = 25

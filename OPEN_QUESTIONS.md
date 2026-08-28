@@ -233,3 +233,32 @@ assertions should hold unchanged.
 on Q2 ("last month" as a calendar month, not a rolling 30 days) and Q4 (the
 `status = 'completed'` filter, which is the difference between 1467.7 and 1564.92 and
 which no error will reveal).
+
+### Q-013 · Escalation level saturates within a struggling account
+**Context:** DECISIONS.md D-010. Account-level signals (health, contract, CARR,
+competitor) outweigh ticket-level ones (duplicates, priority, module gap), so all 12
+of tenant 4's tickets and all 9 of tenant 8's score CRITICAL. Across the roster the
+spread is reasonable — standard 20, elevated 20, urgent 13, critical 32, and the
+criticals are concentrated in exactly the three accounts in real trouble (t2, t4, t8).
+Within one of those accounts, though, the level cannot tell the worst ticket from the
+mildest.
+**Taken:** left as is. It is arguably correct — every ticket from an expired-contract,
+health-28 account genuinely is critical — and `EscalationAssessment.score` still ranks
+them (t4's range is 100–135), so a queue can sort on score even where the level
+saturates.
+**Needs you to:** decide whether the brief should show the raw score alongside the
+level, and whether a queue view should sort on score rather than level. My view: show
+the score, sort on it. It costs nothing and it is the only thing that orders a
+struggling account's backlog.
+
+### Q-014 · Escalation weights are calibrated by eye, not by outcomes
+**Context:** The weights in `config.py` were set by scoring all 85 tickets and
+checking the distribution looked sane. There is no outcome data — no record of which
+tickets actually escalated, churned, or resolved quietly — so this is a cold-start
+scorer and cannot be anything else with the data provided.
+**Taken:** kept the weights, put every one in `config.py` with the reasoning inline,
+and made the signals an audit trail so a disputed call can be traced without re-running
+anything.
+**Needs you to:** nothing now. Worth saying out loud in the live session if escalation
+logic comes up — the honest answer is that the ordering is defensible and the magnitudes
+are a guess awaiting feedback data.

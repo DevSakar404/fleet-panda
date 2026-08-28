@@ -254,6 +254,60 @@ is a correctness property of every relative-window answer this system gives, not
 feature someone might want later.
 **Where it lives:** `src/agent/sql_agent.py:SqlAnswer.date_anchor` / `.anchor_mode`.
 
+### D-010 · Escalation is additive points in Python, not a judgement by the model
+**Date:** 2026-08-29
+**Context:** The assignment asks for an escalation recommendation that weighs
+health score, CARR and contract proximity "not just ticket priority". The
+mechanism was contested: the LLM has all five sources in front of it already and
+could simply be asked.
+**Options considered:**
+- A. Ask the LLM for the level. Free, reads well, and gives a different answer on
+  Tuesday. "Why was this escalated?" becomes unanswerable, which is fatal in a
+  live session and worse in production.
+- B. A decision tree / rule cascade. Deterministic and explainable, but the first
+  branch dominates: any tree ordered on health misses t2 Heartland (health 45,
+  contract expiring tomorrow, 72k CARR, competitor named on a renewal call) —
+  the most time-critical account on the roster.
+- C. Additive weighted signals, bucketed into four levels, each signal carrying
+  the sentence the brief prints.
+**Chosen:** C. Additive is what lets independent moderate signals compose into a
+high level, which is exactly the t2 case: no single signal fires critical, five
+moderate ones sum to 73. The weights order is the actual argument and it lives in
+`config.py` where a FleetPanda employee can dispute it.
+`test_no_single_signal_reaches_critical` pins that no weight can quietly grow
+past the threshold on its own.
+**Trade-off accepted:** the point scale is arbitrary — only the ordering is
+defensible, and calibration came from eyeballing all 85 tickets rather than from
+outcome data, which is the honest ceiling on any cold-start scorer. Also, account-
+level signals dominate ticket-level ones, so all 12 of tenant 4's tickets score
+CRITICAL and the level cannot rank them against each other; the raw `score` still
+can. Logged as OPEN_QUESTIONS Q-013.
+**Where it lives:** `src/agent/escalation.py:score_ticket`, weights in
+`src/config.py`.
+
+---
+
+### D-011 · `today` is injected; the escalation clock is not the data clock
+**Date:** 2026-08-29
+**Context:** D-001 established that operational questions anchor on
+`MAX(delivery_date)` because the data stops on 2026-05-29. It is tempting to apply
+that anchor everywhere for consistency.
+**Options considered:**
+- A. Anchor contract proximity on the data too. Consistent, and wrong: it would
+  report t2's contract as expiring in 93 days when it expires tomorrow.
+- B. Use `date.today()` directly. Correct, and makes every test time-dependent —
+  the suite would start failing in September for no reason.
+- C. Use the real calendar, injected as a parameter defaulting to `date.today()`.
+**Chosen:** C. Contract end dates are forward-looking CRM facts, not operational
+history, so they do not move with the fixture's staleness. Two different clocks in
+one system is a thing worth being explicit about rather than accidentally
+consistent on.
+**Trade-off accepted:** a reader has to notice that `volume_change_pct` is
+data-anchored while `today` is calendar-anchored in the same function. Called out
+in the docstring, and `test_contract_signal_moves_with_the_injected_date` makes
+the dependency visible.
+**Where it lives:** `src/agent/escalation.py:score_ticket`, `today` parameter.
+
 ---
 
 ## Data quality observations
