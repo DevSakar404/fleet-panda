@@ -199,3 +199,19 @@ assumed away.
 unlimited query as a fourth layer. My view: not worth it — it doubles query cost to
 defend against a bug the AST tests already cover, and layer 3's job is to be a smoke
 alarm, not a second guard.
+
+### Q-011 · `DESIGN.md` is a file CLAUDE.md §4 does not list
+**Context:** CLAUDE.md §4 gives an exact file layout and says not to invent additions.
+I followed that during the foundation session and wrote no design document, putting the
+architecture into README.md, DECISIONS.md and module docstrings instead. On review that
+distributed the end-to-end flow across six docstrings, with no single page showing a
+request travelling through the system — the thing the 10-minute code walkthrough in the
+live session actually needs.
+**Taken:** added `DESIGN.md` at your explicit request. It duplicates no content: the
+diagrams and the module-boundary table exist nowhere else. `implementation.md` was
+deliberately *not* added — CLAUDE.md §7 is the implementation plan, and a second copy
+would drift from it.
+**Needs you to:** add `DESIGN.md` to the §4 layout so the charter and the repo agree.
+Flagging separately that I should have logged this as a question during the foundation
+session rather than silently deciding not to write it — the charter's rule is to log
+conflicts, and "the layout omits something useful" is a conflict.

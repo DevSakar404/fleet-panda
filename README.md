@@ -85,6 +85,7 @@ platform ranking is a wrong answer that looks right.
 |---|---|
 | [CLAUDE.md](CLAUDE.md) | The build charter. Source of truth for scope and standards. |
 | [RECON.md](RECON.md) | Step 0 data exploration. Read this first — it explains most of the design. |
+| [DESIGN.md](DESIGN.md) | How the pieces fit: request flows, the three isolation layers, module boundaries. |
 | [DECISIONS.md](DECISIONS.md) | Engineering journal, appended as decisions were made. |
 | [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md) | Session summary, and questions needing a human. |
 | [SECURITY.md](SECURITY.md) | Code-review challenge. Outline only so far. |
