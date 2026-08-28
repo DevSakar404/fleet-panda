@@ -1,0 +1,187 @@
+[
+  {
+    "alias": "Cascade Fuel",
+    "canonical_name": "Cascade Fuel Services",
+    "tenant_id": 1
+  },
+  {
+    "alias": "CFS",
+    "canonical_name": "Cascade Fuel Services",
+    "tenant_id": 1
+  },
+  {
+    "alias": "Cascade Fuel Svcs",
+    "canonical_name": "Cascade Fuel Services",
+    "tenant_id": 1
+  },
+  {
+    "alias": "Heartland",
+    "canonical_name": "Heartland Propane",
+    "tenant_id": 2
+  },
+  {
+    "alias": "HP Gas",
+    "canonical_name": "Heartland Propane",
+    "tenant_id": 2
+  },
+  {
+    "alias": "Heartland Propane LLC",
+    "canonical_name": "Heartland Propane",
+    "tenant_id": 2
+  },
+  {
+    "alias": "Summit Energy",
+    "canonical_name": "Summit Energy Group",
+    "tenant_id": 3
+  },
+  {
+    "alias": "SEG",
+    "canonical_name": "Summit Energy Group",
+    "tenant_id": 3
+  },
+  {
+    "alias": "Summit",
+    "canonical_name": "Summit Energy Group",
+    "tenant_id": 3
+  },
+  {
+    "alias": "Desert Sun",
+    "canonical_name": "Desert Sun Petroleum",
+    "tenant_id": 4
+  },
+  {
+    "alias": "DSP",
+    "canonical_name": "Desert Sun Petroleum",
+    "tenant_id": 4
+  },
+  {
+    "alias": "Desert Sun Petro",
+    "canonical_name": "Desert Sun Petroleum",
+    "tenant_id": 4
+  },
+  {
+    "alias": "Great Lakes",
+    "canonical_name": "Great Lakes Fuel Co",
+    "tenant_id": 5
+  },
+  {
+    "alias": "GLF",
+    "canonical_name": "Great Lakes Fuel Co",
+    "tenant_id": 5
+  },
+  {
+    "alias": "Great Lakes Fuel",
+    "canonical_name": "Great Lakes Fuel Co",
+    "tenant_id": 5
+  },
+  {
+    "alias": "GL Fuel Co",
+    "canonical_name": "Great Lakes Fuel Co",
+    "tenant_id": 5
+  },
+  {
+    "alias": "Pioneer Fuel",
+    "canonical_name": "Pioneer Fuel Distributors",
+    "tenant_id": 6
+  },
+  {
+    "alias": "PFD",
+    "canonical_name": "Pioneer Fuel Distributors",
+    "tenant_id": 6
+  },
+  {
+    "alias": "Pioneer",
+    "canonical_name": "Pioneer Fuel Distributors",
+    "tenant_id": 6
+  },
+  {
+    "alias": "Atlantic Coast",
+    "canonical_name": "Atlantic Coast Energy",
+    "tenant_id": 7
+  },
+  {
+    "alias": "ACE",
+    "canonical_name": "Atlantic Coast Energy",
+    "tenant_id": 7
+  },
+  {
+    "alias": "AC Energy",
+    "canonical_name": "Atlantic Coast Energy",
+    "tenant_id": 7
+  },
+  {
+    "alias": "Timber Ridge",
+    "canonical_name": "Timber Ridge Oil",
+    "tenant_id": 8
+  },
+  {
+    "alias": "TRO",
+    "canonical_name": "Timber Ridge Oil",
+    "tenant_id": 8
+  },
+  {
+    "alias": "Timber Ridge Oil Co",
+    "canonical_name": "Timber Ridge Oil",
+    "tenant_id": 8
+  },
+  {
+    "alias": "Prairie Wind",
+    "canonical_name": "Prairie Wind Fuels",
+    "tenant_id": 9
+  },
+  {
+    "alias": "PWF",
+    "canonical_name": "Prairie Wind Fuels",
+    "tenant_id": 9
+  },
+  {
+    "alias": "Prairie Wind Fuel",
+    "canonical_name": "Prairie Wind Fuels",
+    "tenant_id": 9
+  },
+  {
+    "alias": "Bayshore",
+    "canonical_name": "Bayshore Petroleum",
+    "tenant_id": 10
+  },
+  {
+    "alias": "Bayshore Petro",
+    "canonical_name": "Bayshore Petroleum",
+    "tenant_id": 10
+  },
+  {
+    "alias": "BSP",
+    "canonical_name": "Bayshore Petroleum",
+    "tenant_id": 10
+  },
+  {
+    "alias": "Northern Star",
+    "canonical_name": "Northern Star Propane",
+    "tenant_id": 11
+  },
+  {
+    "alias": "NSP",
+    "canonical_name": "Northern Star Propane",
+    "tenant_id": 11
+  },
+  {
+    "alias": "N Star Propane",
+    "canonical_name": "Northern Star Propane",
+    "tenant_id": 11
+  },
+  {
+    "alias": "Redwood Energy",
+    "canonical_name": "Redwood Energy Solutions",
+    "tenant_id": 12
+  },
+  {
+    "alias": "RES",
+    "canonical_name": "Redwood Energy Solutions",
+    "tenant_id": 12
+  },
+  {
+    "alias": "Redwood",
+    "canonical_name": "Redwood Energy Solutions",
+    "tenant_id": 12
+  }
+]

@@ -1,0 +1,788 @@
+[
+  {
+    "call_id": "CALL-08-003",
+    "tenant_name": "Timber Ridge Oil",
+    "participants": [
+      "Maria",
+      "Contact_8_1"
+    ],
+    "topic": "Escalation call - billing dispute",
+    "summary": "Call with Timber Ridge Oil regarding escalation call - billing dispute. Customer expressed frustration with ongoing issues.",
+    "sentiment": "negative",
+    "action_items": [
+      "Follow up with engineering on the GPS delay issue",
+      "Send invoice correction for April billing",
+      "Schedule training session for new dispatchers"
+    ],
+    "date": "2026-04-18",
+    "duration_minutes": 17,
+    "competitor_mentioned": false
+  },
+  {
+    "call_id": "CALL-08-005",
+    "tenant_name": "Timber Ridge",
+    "participants": [
+      "Maria",
+      "Contact_8_0"
+    ],
+    "topic": "Training session follow-up",
+    "summary": "Call with Timber Ridge regarding training session follow-up. Standard check-in call, no major concerns raised.",
+    "sentiment": "neutral",
+    "action_items": [
+      "Share documentation on tank monitor setup",
+      "Connect customer with implementation team",
+      "Escalate TankLink connectivity issue to hardware team"
+    ],
+    "date": "2026-03-16",
+    "duration_minutes": 26,
+    "competitor_mentioned": false
+  },
+  {
+    "call_id": "CALL-07-001",
+    "tenant_name": "Atlantic Coast",
+    "participants": [
+      "Arcadio",
+      "Contact_7_1"
+    ],
+    "topic": "Quarterly business review",
+    "summary": "Call with Atlantic Coast regarding quarterly business review. Standard check-in call, no major concerns raised. Customer compared our pricing module unfavorably to CompuTank.",
+    "sentiment": "neutral",
+    "action_items": [
+      "Send invoice correction for April billing",
+      "Review contract terms before renewal date"
+    ],
+    "date": "2026-04-01",
+    "duration_minutes": 20,
+    "competitor_mentioned": true
+  },
+  {
+    "call_id": "CALL-03-002",
+    "tenant_name": "Summit Energy",
+    "participants": [
+      "Maria",
+      "Contact_3_1"
+    ],
+    "topic": "New module demo",
+    "summary": "Call with Summit Energy regarding new module demo. Customer had some questions but nothing urgent.",
+    "sentiment": "neutral",
+    "action_items": [
+      "Schedule training session for new dispatchers",
+      "Escalate TankLink connectivity issue to hardware team",
+      "Send updated pricing proposal by end of week"
+    ],
+    "date": "2026-05-10",
+    "duration_minutes": 57,
+    "competitor_mentioned": false
+  },
+  {
+    "call_id": "CALL-11-003",
+    "tenant_name": "N Star Propane",
+    "participants": [
+      "Maria",
+      "Contact_11_0"
+    ],
+    "topic": "Onboarding check-in",
+    "summary": "Call with N Star Propane regarding onboarding check-in. Tense call. Customer threatened to evaluate alternatives.",
+    "sentiment": "negative",
+    "action_items": [
+      "Schedule training session for new dispatchers",
+      "Create ClickUp task for the CSV import bug",
+      "Prepare demo of route builder module"
+    ],
+    "date": "2026-05-01",
+    "duration_minutes": 15,
+    "competitor_mentioned": false
+  },
+  {
+    "call_id": "CALL-11-004",
+    "tenant_name": "Northern Star",
+    "participants": [
+      "Maria",
+      "Contact_11_1"
+    ],
+    "topic": "Feature request discussion",
+    "summary": "Call with Northern Star regarding feature request discussion. Customer unhappy with response time on open tickets.",
+    "sentiment": "negative",
+    "action_items": [
+      "Create ClickUp task for the CSV import bug",
+      "Escalate TankLink connectivity issue to hardware team",
+      "Send updated pricing proposal by end of week"
+    ],
+    "date": "2026-05-14",
+    "duration_minutes": 30,
+    "competitor_mentioned": false
+  },
+  {
+    "call_id": "CALL-05-005",
+    "tenant_name": "Great Lakes Fuel Co",
+    "participants": [
+      "Maria",
+      "Contact_5_0"
+    ],
+    "topic": "Churn risk mitigation call",
+    "summary": "Call with Great Lakes Fuel Co regarding churn risk mitigation call. Customer praised the support team response time.",
+    "sentiment": "positive",
+    "action_items": [
+      "Prepare demo of route builder module",
+      "Create ClickUp task for the CSV import bug"
+    ],
+    "date": "2026-05-03",
+    "duration_minutes": 28,
+    "competitor_mentioned": false
+  },
+  {
+    "call_id": "CALL-09-002",
+    "tenant_name": "Prairie Wind Fuel",
+    "participants": [
+      "Maria",
+      "Contact_9_1"
+    ],
+    "topic": "Training session follow-up",
+    "summary": "Call with Prairie Wind Fuel regarding training session follow-up. Standard check-in call, no major concerns raised.",
+    "sentiment": "neutral",
+    "action_items": [
+      "Review contract terms before renewal date",
+      "Share documentation on tank monitor setup"
+    ],
+    "date": "2026-05-24",
+    "duration_minutes": 41,
+    "competitor_mentioned": false
+  },
+  {
+    "call_id": "CALL-06-002",
+    "tenant_name": "Pioneer Fuel Distributors",
+    "participants": [
+      "Maria",
+      "Contact_6_1"
+    ],
+    "topic": "Implementation status update",
+    "summary": "Call with Pioneer Fuel Distributors regarding implementation status update. Customer expressed satisfaction with recent improvements.",
+    "sentiment": "positive",
+    "action_items": [
+      "Schedule training session for new dispatchers",
+      "Follow up with engineering on the GPS delay issue",
+      "Create ClickUp task for the CSV import bug"
+    ],
+    "date": "2026-04-25",
+    "duration_minutes": 17,
+    "competitor_mentioned": false
+  },
+  {
+    "call_id": "CALL-04-002",
+    "tenant_name": "Desert Sun Petro",
+    "participants": [
+      "Arcadio",
+      "Contact_4_0"
+    ],
+    "topic": "New module demo",
+    "summary": "Call with Desert Sun Petro regarding new module demo. Tense call. Customer threatened to evaluate alternatives. Customer compared our pricing module unfavorably to CompuTank.",
+    "sentiment": "negative",
+    "action_items": [
+      "Escalate TankLink connectivity issue to hardware team",
+      "Follow up with engineering on the GPS delay issue",
+      "Review contract terms before renewal date"
+    ],
+    "date": "2026-05-08",
+    "duration_minutes": 59,
+    "competitor_mentioned": true
+  },
+  {
+    "call_id": "CALL-09-003",
+    "tenant_name": "PWF",
+    "participants": [
+      "Maria",
+      "Contact_9_0"
+    ],
+    "topic": "New module demo",
+    "summary": "Call with PWF regarding new module demo. Customer had some questions but nothing urgent. Customer expressed interest in adding the driver_app module.",
+    "sentiment": "neutral",
+    "action_items": [
+      "Create ClickUp task for the CSV import bug",
+      "Review contract terms before renewal date",
+      "Send invoice correction for April billing"
+    ],
+    "date": "2026-05-01",
+    "duration_minutes": 42,
+    "competitor_mentioned": false
+  },
+  {
+    "call_id": "CALL-02-003",
+    "tenant_name": "Heartland Propane",
+    "participants": [
+      "Arcadio",
+      "Contact_2_1"
+    ],
+    "topic": "Training session follow-up",
+    "summary": "Call with Heartland Propane regarding training session follow-up. Customer expressed frustration with ongoing issues.",
+    "sentiment": "negative",
+    "action_items": [
+      "Connect customer with implementation team",
+      "Schedule training session for new dispatchers",
+      "Escalate TankLink connectivity issue to hardware team"
+    ],
+    "date": "2026-04-03",
+    "duration_minutes": 16,
+    "competitor_mentioned": false
+  },
+  {
+    "call_id": "CALL-09-001",
+    "tenant_name": "PWF",
+    "participants": [
+      "Maria",
+      "Contact_9_1"
+    ],
+    "topic": "Implementation status update",
+    "summary": "Call with PWF regarding implementation status update. Standard check-in call, no major concerns raised.",
+    "sentiment": "neutral",
+    "action_items": [
+      "Review contract terms before renewal date",
+      "Send invoice correction for April billing"
+    ],
+    "date": "2026-05-19",
+    "duration_minutes": 27,
+    "competitor_mentioned": false
+  },
+  {
+    "call_id": "CALL-03-001",
+    "tenant_name": "Summit",
+    "participants": [
+      "Maria",
+      "Contact_3_1"
+    ],
+    "topic": "Onboarding check-in",
+    "summary": "Call with Summit regarding onboarding check-in. Customer praised the support team response time.",
+    "sentiment": "positive",
+    "action_items": [
+      "Create ClickUp task for the CSV import bug"
+    ],
+    "date": "2026-04-02",
+    "duration_minutes": 29,
+    "competitor_mentioned": false
+  },
+  {
+    "call_id": "CALL-06-001",
+    "tenant_name": "Pioneer Fuel Distributors",
+    "participants": [
+      "Maria",
+      "Contact_6_0"
+    ],
+    "topic": "Implementation status update",
+    "summary": "Call with Pioneer Fuel Distributors regarding implementation status update. Good energy on the call, customer seems engaged.",
+    "sentiment": "positive",
+    "action_items": [
+      "Review contract terms before renewal date",
+      "Create ClickUp task for the CSV import bug"
+    ],
+    "date": "2026-03-22",
+    "duration_minutes": 41,
+    "competitor_mentioned": false
+  },
+  {
+    "call_id": "CALL-03-003",
+    "tenant_name": "SEG",
+    "participants": [
+      "Maria",
+      "Contact_3_0"
+    ],
+    "topic": "Quarterly business review",
+    "summary": "Call with SEG regarding quarterly business review. Routine review, customer is steady.",
+    "sentiment": "neutral",
+    "action_items": [
+      "Escalate TankLink connectivity issue to hardware team",
+      "Connect customer with implementation team",
+      "Send invoice correction for April billing"
+    ],
+    "date": "2026-04-22",
+    "duration_minutes": 60,
+    "competitor_mentioned": false
+  },
+  {
+    "call_id": "CALL-10-002",
+    "tenant_name": "Bayshore Petroleum",
+    "participants": [
+      "Arcadio",
+      "Contact_10_0"
+    ],
+    "topic": "Feature request discussion",
+    "summary": "Call with Bayshore Petroleum regarding feature request discussion. Routine review, customer is steady.",
+    "sentiment": "neutral",
+    "action_items": [
+      "Share documentation on tank monitor setup",
+      "Prepare demo of route builder module"
+    ],
+    "date": "2026-03-28",
+    "duration_minutes": 41,
+    "competitor_mentioned": false
+  },
+  {
+    "call_id": "CALL-04-001",
+    "tenant_name": "Desert Sun Petroleum",
+    "participants": [
+      "Arcadio",
+      "Contact_4_1"
+    ],
+    "topic": "Training session follow-up",
+    "summary": "Call with Desert Sun Petroleum regarding training session follow-up. Customer expressed frustration with ongoing issues.",
+    "sentiment": "negative",
+    "action_items": [
+      "Create ClickUp task for the CSV import bug",
+      "Prepare demo of route builder module"
+    ],
+    "date": "2026-05-14",
+    "duration_minutes": 60,
+    "competitor_mentioned": false
+  },
+  {
+    "call_id": "CALL-12-002",
+    "tenant_name": "Redwood Energy",
+    "participants": [
+      "Arcadio",
+      "Contact_12_1"
+    ],
+    "topic": "Escalation call - billing dispute",
+    "summary": "Call with Redwood Energy regarding escalation call - billing dispute. Customer unhappy with response time on open tickets.",
+    "sentiment": "negative",
+    "action_items": [
+      "Create ClickUp task for the CSV import bug",
+      "Share documentation on tank monitor setup"
+    ],
+    "date": "2026-03-27",
+    "duration_minutes": 52,
+    "competitor_mentioned": false
+  },
+  {
+    "call_id": "CALL-01-001",
+    "tenant_name": "Cascade Fuel Svcs",
+    "participants": [
+      "Arcadio",
+      "Contact_1_1"
+    ],
+    "topic": "Onboarding check-in",
+    "summary": "Call with Cascade Fuel Svcs regarding onboarding check-in. Good energy on the call, customer seems engaged.",
+    "sentiment": "positive",
+    "action_items": [
+      "Create ClickUp task for the CSV import bug",
+      "Schedule training session for new dispatchers"
+    ],
+    "date": "2026-05-02",
+    "duration_minutes": 33,
+    "competitor_mentioned": false
+  },
+  {
+    "call_id": "CALL-01-005",
+    "tenant_name": "Cascade Fuel Services",
+    "participants": [
+      "Arcadio",
+      "Contact_1_0"
+    ],
+    "topic": "Renewal negotiation",
+    "summary": "Call with Cascade Fuel Services regarding renewal negotiation. Customer expressed satisfaction with recent improvements.",
+    "sentiment": "positive",
+    "action_items": [
+      "Connect customer with implementation team",
+      "Review contract terms before renewal date"
+    ],
+    "date": "2026-04-14",
+    "duration_minutes": 31,
+    "competitor_mentioned": false
+  },
+  {
+    "call_id": "CALL-01-004",
+    "tenant_name": "Cascade Fuel Services",
+    "participants": [
+      "Arcadio",
+      "Contact_1_0"
+    ],
+    "topic": "Feature request discussion",
+    "summary": "Call with Cascade Fuel Services regarding feature request discussion. Good energy on the call, customer seems engaged.",
+    "sentiment": "positive",
+    "action_items": [
+      "Send invoice correction for April billing"
+    ],
+    "date": "2026-05-19",
+    "duration_minutes": 46,
+    "competitor_mentioned": false
+  },
+  {
+    "call_id": "CALL-10-001",
+    "tenant_name": "Bayshore Petroleum",
+    "participants": [
+      "Arcadio",
+      "Contact_10_1"
+    ],
+    "topic": "Escalation call - billing dispute",
+    "summary": "Call with Bayshore Petroleum regarding escalation call - billing dispute. Good energy on the call, customer seems engaged.",
+    "sentiment": "positive",
+    "action_items": [
+      "Connect customer with implementation team",
+      "Review contract terms before renewal date"
+    ],
+    "date": "2026-04-17",
+    "duration_minutes": 50,
+    "competitor_mentioned": false
+  },
+  {
+    "call_id": "CALL-10-003",
+    "tenant_name": "Bayshore Petroleum",
+    "participants": [
+      "Arcadio",
+      "Contact_10_0"
+    ],
+    "topic": "Onboarding check-in",
+    "summary": "Call with Bayshore Petroleum regarding onboarding check-in. Customer praised the support team response time.",
+    "sentiment": "positive",
+    "action_items": [
+      "Share documentation on tank monitor setup",
+      "Escalate TankLink connectivity issue to hardware team",
+      "Send invoice correction for April billing"
+    ],
+    "date": "2026-03-30",
+    "duration_minutes": 16,
+    "competitor_mentioned": false
+  },
+  {
+    "call_id": "CALL-11-001",
+    "tenant_name": "Northern Star Propane",
+    "participants": [
+      "Maria",
+      "Contact_11_1"
+    ],
+    "topic": "Onboarding check-in",
+    "summary": "Call with Northern Star Propane regarding onboarding check-in. Customer expressed frustration with ongoing issues.",
+    "sentiment": "negative",
+    "action_items": [
+      "Schedule training session for new dispatchers",
+      "Connect customer with implementation team"
+    ],
+    "date": "2026-04-10",
+    "duration_minutes": 44,
+    "competitor_mentioned": false
+  },
+  {
+    "call_id": "CALL-02-001",
+    "tenant_name": "Heartland Propane",
+    "participants": [
+      "Arcadio",
+      "Contact_2_1"
+    ],
+    "topic": "Renewal negotiation",
+    "summary": "Call with Heartland Propane regarding renewal negotiation. Tense call. Customer threatened to evaluate alternatives. Customer mentioned they got a demo from FuelCloud last week.",
+    "sentiment": "negative",
+    "action_items": [
+      "Follow up with engineering on the GPS delay issue",
+      "Send invoice correction for April billing",
+      "Schedule training session for new dispatchers"
+    ],
+    "date": "2026-05-11",
+    "duration_minutes": 40,
+    "competitor_mentioned": true
+  },
+  {
+    "call_id": "CALL-05-004",
+    "tenant_name": "Great Lakes Fuel Co",
+    "participants": [
+      "Maria",
+      "Contact_5_1"
+    ],
+    "topic": "Renewal negotiation",
+    "summary": "Call with Great Lakes Fuel Co regarding renewal negotiation. Standard check-in call, no major concerns raised.",
+    "sentiment": "neutral",
+    "action_items": [
+      "Send updated pricing proposal by end of week"
+    ],
+    "date": "2026-04-17",
+    "duration_minutes": 49,
+    "competitor_mentioned": false
+  },
+  {
+    "call_id": "CALL-12-001",
+    "tenant_name": "RES",
+    "participants": [
+      "Arcadio",
+      "Contact_12_0"
+    ],
+    "topic": "Quarterly business review",
+    "summary": "Call with RES regarding quarterly business review. Customer expressed satisfaction with recent improvements.",
+    "sentiment": "positive",
+    "action_items": [
+      "Follow up with engineering on the GPS delay issue",
+      "Create ClickUp task for the CSV import bug"
+    ],
+    "date": "2026-04-20",
+    "duration_minutes": 24,
+    "competitor_mentioned": false
+  },
+  {
+    "call_id": "CALL-08-001",
+    "tenant_name": "Timber Ridge Oil Co",
+    "participants": [
+      "Maria",
+      "Contact_8_1"
+    ],
+    "topic": "Churn risk mitigation call",
+    "summary": "Call with Timber Ridge Oil Co regarding churn risk mitigation call. Customer praised the support team response time.",
+    "sentiment": "positive",
+    "action_items": [
+      "Escalate TankLink connectivity issue to hardware team",
+      "Review contract terms before renewal date",
+      "Prepare demo of route builder module"
+    ],
+    "date": "2026-05-19",
+    "duration_minutes": 15,
+    "competitor_mentioned": false
+  },
+  {
+    "call_id": "CALL-07-002",
+    "tenant_name": "Atlantic Coast Energy",
+    "participants": [
+      "Arcadio",
+      "Contact_7_0"
+    ],
+    "topic": "Renewal negotiation",
+    "summary": "Call with Atlantic Coast Energy regarding renewal negotiation. Standard check-in call, no major concerns raised.",
+    "sentiment": "neutral",
+    "action_items": [
+      "Prepare demo of route builder module",
+      "Share documentation on tank monitor setup",
+      "Send invoice correction for April billing"
+    ],
+    "date": "2026-04-06",
+    "duration_minutes": 16,
+    "competitor_mentioned": false
+  },
+  {
+    "call_id": "CALL-05-001",
+    "tenant_name": "Great Lakes Fuel Co",
+    "participants": [
+      "Maria",
+      "Contact_5_1"
+    ],
+    "topic": "Technical troubleshooting",
+    "summary": "Call with Great Lakes Fuel Co regarding technical troubleshooting. Customer had some questions but nothing urgent.",
+    "sentiment": "neutral",
+    "action_items": [
+      "Share documentation on tank monitor setup",
+      "Create ClickUp task for the CSV import bug"
+    ],
+    "date": "2026-03-21",
+    "duration_minutes": 59,
+    "competitor_mentioned": false
+  },
+  {
+    "call_id": "CALL-11-002",
+    "tenant_name": "Northern Star Propane",
+    "participants": [
+      "Maria",
+      "Contact_11_1"
+    ],
+    "topic": "Escalation call - billing dispute",
+    "summary": "Call with Northern Star Propane regarding escalation call - billing dispute. Good energy on the call, customer seems engaged.",
+    "sentiment": "positive",
+    "action_items": [
+      "Review contract terms before renewal date",
+      "Schedule training session for new dispatchers"
+    ],
+    "date": "2026-05-19",
+    "duration_minutes": 47,
+    "competitor_mentioned": false
+  },
+  {
+    "call_id": "CALL-01-003",
+    "tenant_name": "Cascade Fuel Svcs",
+    "participants": [
+      "Arcadio",
+      "Contact_1_0"
+    ],
+    "topic": "Training session follow-up",
+    "summary": "Call with Cascade Fuel Svcs regarding training session follow-up. Customer expressed satisfaction with recent improvements.",
+    "sentiment": "positive",
+    "action_items": [
+      "Share documentation on tank monitor setup"
+    ],
+    "date": "2026-04-12",
+    "duration_minutes": 52,
+    "competitor_mentioned": false
+  },
+  {
+    "call_id": "CALL-01-002",
+    "tenant_name": "Cascade Fuel Services",
+    "participants": [
+      "Arcadio",
+      "Contact_1_1"
+    ],
+    "topic": "Churn risk mitigation call",
+    "summary": "Call with Cascade Fuel Services regarding churn risk mitigation call. Customer unhappy with response time on open tickets.",
+    "sentiment": "negative",
+    "action_items": [
+      "Share documentation on tank monitor setup",
+      "Send updated pricing proposal by end of week",
+      "Prepare demo of route builder module"
+    ],
+    "date": "2026-05-11",
+    "duration_minutes": 40,
+    "competitor_mentioned": false
+  },
+  {
+    "call_id": "CALL-11-006",
+    "tenant_name": "NSP",
+    "participants": [
+      "Maria",
+      "Contact_11_0"
+    ],
+    "topic": "Escalation call - billing dispute",
+    "summary": "Call with NSP regarding escalation call - billing dispute. Customer had some questions but nothing urgent. Customer compared our pricing module unfavorably to CompuTank.",
+    "sentiment": "neutral",
+    "action_items": [
+      "Send updated pricing proposal by end of week",
+      "Review contract terms before renewal date"
+    ],
+    "date": "2026-05-23",
+    "duration_minutes": 48,
+    "competitor_mentioned": true
+  },
+  {
+    "call_id": "CALL-05-002",
+    "tenant_name": "Great Lakes Fuel Co",
+    "participants": [
+      "Maria",
+      "Contact_5_1"
+    ],
+    "topic": "Onboarding check-in",
+    "summary": "Call with Great Lakes Fuel Co regarding onboarding check-in. Tense call. Customer threatened to evaluate alternatives.",
+    "sentiment": "negative",
+    "action_items": [
+      "Prepare demo of route builder module"
+    ],
+    "date": "2026-04-23",
+    "duration_minutes": 52,
+    "competitor_mentioned": false
+  },
+  {
+    "call_id": "CALL-06-003",
+    "tenant_name": "Pioneer Fuel Distributors",
+    "participants": [
+      "Maria",
+      "Contact_6_0"
+    ],
+    "topic": "Escalation call - billing dispute",
+    "summary": "Call with Pioneer Fuel Distributors regarding escalation call - billing dispute. Routine review, customer is steady. Customer expressed interest in adding the analytics module.",
+    "sentiment": "neutral",
+    "action_items": [
+      "Review contract terms before renewal date"
+    ],
+    "date": "2026-04-06",
+    "duration_minutes": 42,
+    "competitor_mentioned": false
+  },
+  {
+    "call_id": "CALL-08-002",
+    "tenant_name": "Timber Ridge",
+    "participants": [
+      "Maria",
+      "Contact_8_1"
+    ],
+    "topic": "Renewal negotiation",
+    "summary": "Call with Timber Ridge regarding renewal negotiation. Customer unhappy with response time on open tickets.",
+    "sentiment": "negative",
+    "action_items": [
+      "Create ClickUp task for the CSV import bug",
+      "Share documentation on tank monitor setup",
+      "Connect customer with implementation team"
+    ],
+    "date": "2026-04-10",
+    "duration_minutes": 37,
+    "competitor_mentioned": false
+  },
+  {
+    "call_id": "CALL-08-004",
+    "tenant_name": "Timber Ridge Oil",
+    "participants": [
+      "Maria",
+      "Contact_8_1"
+    ],
+    "topic": "Implementation status update",
+    "summary": "Call with Timber Ridge Oil regarding implementation status update. Tense call. Customer threatened to evaluate alternatives. Customer compared our pricing module unfavorably to CompuTank.",
+    "sentiment": "negative",
+    "action_items": [
+      "Connect customer with implementation team",
+      "Follow up with engineering on the GPS delay issue",
+      "Schedule training session for new dispatchers"
+    ],
+    "date": "2026-04-20",
+    "duration_minutes": 50,
+    "competitor_mentioned": true
+  },
+  {
+    "call_id": "CALL-05-003",
+    "tenant_name": "Great Lakes",
+    "participants": [
+      "Maria",
+      "Contact_5_1"
+    ],
+    "topic": "New module demo",
+    "summary": "Call with Great Lakes regarding new module demo. Customer had some questions but nothing urgent.",
+    "sentiment": "neutral",
+    "action_items": [
+      "Escalate TankLink connectivity issue to hardware team",
+      "Follow up with engineering on the GPS delay issue",
+      "Create ClickUp task for the CSV import bug"
+    ],
+    "date": "2026-04-28",
+    "duration_minutes": 54,
+    "competitor_mentioned": false
+  },
+  {
+    "call_id": "CALL-02-002",
+    "tenant_name": "Heartland Propane",
+    "participants": [
+      "Arcadio",
+      "Contact_2_0"
+    ],
+    "topic": "Onboarding check-in",
+    "summary": "Call with Heartland Propane regarding onboarding check-in. Customer expressed satisfaction with recent improvements. Customer mentioned they got a demo from FuelCloud last week.",
+    "sentiment": "positive",
+    "action_items": [
+      "Send updated pricing proposal by end of week",
+      "Connect customer with implementation team",
+      "Send invoice correction for April billing"
+    ],
+    "date": "2026-04-13",
+    "duration_minutes": 27,
+    "competitor_mentioned": true
+  },
+  {
+    "call_id": "CALL-11-005",
+    "tenant_name": "NSP",
+    "participants": [
+      "Maria",
+      "Contact_11_1"
+    ],
+    "topic": "Technical troubleshooting",
+    "summary": "Call with NSP regarding technical troubleshooting. Customer unhappy with response time on open tickets. Customer asked if we support features similar to what ADD Systems offers.",
+    "sentiment": "negative",
+    "action_items": [
+      "Schedule training session for new dispatchers",
+      "Create ClickUp task for the CSV import bug"
+    ],
+    "date": "2026-05-20",
+    "duration_minutes": 20,
+    "competitor_mentioned": true
+  },
+  {
+    "call_id": "CALL-06-004",
+    "tenant_name": "PFD",
+    "participants": [
+      "Maria",
+      "Contact_6_0"
+    ],
+    "topic": "Churn risk mitigation call",
+    "summary": "Call with PFD regarding churn risk mitigation call. Standard check-in call, no major concerns raised.",
+    "sentiment": "neutral",
+    "action_items": [
+      "Schedule training session for new dispatchers"
+    ],
+    "date": "2026-05-09",
+    "duration_minutes": 50,
+    "competitor_mentioned": false
+  }
+]

@@ -1,0 +1,214 @@
+[
+  {
+    "tenant_id": 1,
+    "name": "Cascade Fuel Services",
+    "health_score": 82,
+    "carr": 48000,
+    "modules_active": [
+      "dispatch",
+      "pricing",
+      "route_builder",
+      "tank_monitor",
+      "customer_portal"
+    ],
+    "contract_end_date": "2027-03-15",
+    "assigned_csm": "Arcadio",
+    "fleet_size": 12,
+    "onboarding_status": "live",
+    "region": "Pacific Northwest"
+  },
+  {
+    "tenant_id": 2,
+    "name": "Heartland Propane",
+    "health_score": 45,
+    "carr": 72000,
+    "modules_active": [
+      "dispatch",
+      "pricing",
+      "invoicing"
+    ],
+    "contract_end_date": "2026-08-30",
+    "assigned_csm": "Arcadio",
+    "fleet_size": 22,
+    "onboarding_status": "live",
+    "region": "Midwest"
+  },
+  {
+    "tenant_id": 3,
+    "name": "Summit Energy Group",
+    "health_score": 91,
+    "carr": 96000,
+    "modules_active": [
+      "dispatch",
+      "pricing",
+      "route_builder",
+      "tank_monitor",
+      "customer_portal",
+      "invoicing",
+      "analytics",
+      "driver_app"
+    ],
+    "contract_end_date": "2028-01-10",
+    "assigned_csm": "Maria",
+    "fleet_size": 35,
+    "onboarding_status": "live",
+    "region": "Northeast"
+  },
+  {
+    "tenant_id": 4,
+    "name": "Desert Sun Petroleum",
+    "health_score": 28,
+    "carr": 36000,
+    "modules_active": [
+      "dispatch",
+      "pricing"
+    ],
+    "contract_end_date": "2026-07-15",
+    "assigned_csm": "Arcadio",
+    "fleet_size": 8,
+    "onboarding_status": "live",
+    "region": "Southwest"
+  },
+  {
+    "tenant_id": 5,
+    "name": "Great Lakes Fuel Co",
+    "health_score": 67,
+    "carr": 60000,
+    "modules_active": [
+      "dispatch",
+      "pricing",
+      "route_builder",
+      "invoicing",
+      "customer_portal"
+    ],
+    "contract_end_date": "2027-06-20",
+    "assigned_csm": "Maria",
+    "fleet_size": 18,
+    "onboarding_status": "live",
+    "region": "Great Lakes"
+  },
+  {
+    "tenant_id": 6,
+    "name": "Pioneer Fuel Distributors",
+    "health_score": 73,
+    "carr": 54000,
+    "modules_active": [
+      "dispatch",
+      "pricing",
+      "route_builder",
+      "tank_monitor"
+    ],
+    "contract_end_date": "2027-09-01",
+    "assigned_csm": "Maria",
+    "fleet_size": 14,
+    "onboarding_status": "live",
+    "region": "Mountain West"
+  },
+  {
+    "tenant_id": 7,
+    "name": "Atlantic Coast Energy",
+    "health_score": 58,
+    "carr": 84000,
+    "modules_active": [
+      "dispatch",
+      "pricing",
+      "invoicing",
+      "analytics",
+      "route_builder"
+    ],
+    "contract_end_date": "2026-12-31",
+    "assigned_csm": "Arcadio",
+    "fleet_size": 28,
+    "onboarding_status": "live",
+    "region": "Mid-Atlantic"
+  },
+  {
+    "tenant_id": 8,
+    "name": "Timber Ridge Oil",
+    "health_score": 39,
+    "carr": 42000,
+    "modules_active": [
+      "dispatch",
+      "pricing",
+      "driver_app"
+    ],
+    "contract_end_date": "2026-09-10",
+    "assigned_csm": "Maria",
+    "fleet_size": 10,
+    "onboarding_status": "live",
+    "region": "Pacific Northwest"
+  },
+  {
+    "tenant_id": 9,
+    "name": "Prairie Wind Fuels",
+    "health_score": 88,
+    "carr": 66000,
+    "modules_active": [
+      "dispatch",
+      "pricing",
+      "route_builder",
+      "tank_monitor",
+      "customer_portal",
+      "invoicing"
+    ],
+    "contract_end_date": "2027-11-15",
+    "assigned_csm": "Maria",
+    "fleet_size": 20,
+    "onboarding_status": "live",
+    "region": "Great Plains"
+  },
+  {
+    "tenant_id": 10,
+    "name": "Bayshore Petroleum",
+    "health_score": 71,
+    "carr": 78000,
+    "modules_active": [
+      "dispatch",
+      "pricing",
+      "route_builder",
+      "invoicing",
+      "analytics",
+      "tank_monitor"
+    ],
+    "contract_end_date": "2027-04-30",
+    "assigned_csm": "Arcadio",
+    "fleet_size": 25,
+    "onboarding_status": "live",
+    "region": "Gulf Coast"
+  },
+  {
+    "tenant_id": 11,
+    "name": "Northern Star Propane",
+    "health_score": 55,
+    "carr": 30000,
+    "modules_active": [
+      "dispatch",
+      "pricing"
+    ],
+    "contract_end_date": "2026-10-20",
+    "assigned_csm": "Maria",
+    "fleet_size": 6,
+    "onboarding_status": "onboarding",
+    "region": "Upper Midwest"
+  },
+  {
+    "tenant_id": 12,
+    "name": "Redwood Energy Solutions",
+    "health_score": 79,
+    "carr": 90000,
+    "modules_active": [
+      "dispatch",
+      "pricing",
+      "route_builder",
+      "tank_monitor",
+      "customer_portal",
+      "invoicing",
+      "analytics"
+    ],
+    "contract_end_date": "2028-02-28",
+    "assigned_csm": "Arcadio",
+    "fleet_size": 32,
+    "onboarding_status": "live",
+    "region": "California"
+  }
+]

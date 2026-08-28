@@ -1,0 +1,170 @@
+[
+  {
+    "article_id": "KB-001",
+    "title": "How to resolve driver app login failures",
+    "product_area": "login_access",
+    "symptoms": [
+      "Driver cannot log in",
+      "App shows 'Invalid credentials'",
+      "Login page loops"
+    ],
+    "root_cause": "Password was reset in admin but cached token on device was not cleared.",
+    "resolution": "Have the driver clear app cache and data, then log in with new password. If SSO, verify the user exists in the identity provider.",
+    "created_at": "2025-03-15",
+    "updated_at": "2026-02-10"
+  },
+  {
+    "article_id": "KB-002",
+    "title": "Fixing blank shift board after system update",
+    "product_area": "dispatch",
+    "symptoms": [
+      "Shift board shows no data",
+      "Shifts created but not visible",
+      "Board loads but is empty"
+    ],
+    "root_cause": "Browser cache holding stale JavaScript bundle after deployment.",
+    "resolution": "Hard refresh (Ctrl+Shift+R) or clear browser cache. If persistent, check that the dispatch service is running and shift data exists for the selected date range.",
+    "created_at": "2025-06-20",
+    "updated_at": "2026-04-15"
+  },
+  {
+    "article_id": "KB-003",
+    "title": "TankLink device connectivity troubleshooting",
+    "product_area": "tank_monitor",
+    "symptoms": [
+      "Tank readings showing 0%",
+      "TankLink device offline",
+      "No data received from monitor"
+    ],
+    "root_cause": "TankLink device cellular connection lost due to SIM deactivation, weak signal, or power loss.",
+    "resolution": "1. Check TankLink device power light (solid green = OK). 2. Check cellular signal (3+ bars). 3. Restart TankLink device by unplugging for 30 seconds. 4. If SIM issue, contact hardware team for replacement.",
+    "created_at": "2025-01-10",
+    "updated_at": "2026-05-01"
+  },
+  {
+    "article_id": "KB-004",
+    "title": "QuickBooks sync failure resolution",
+    "product_area": "integration",
+    "symptoms": [
+      "QBO sync error",
+      "Invoices not appearing in QuickBooks",
+      "Sync status shows 'failed'"
+    ],
+    "root_cause": "OAuth token expiry (tokens expire every 100 days) or QBO API rate limit hit.",
+    "resolution": "1. Check integration_events table for error details. 2. If token expired, re-authorize via Settings > Integrations > QuickBooks > Reconnect. 3. If rate limited, wait 1 hour and retry.",
+    "created_at": "2024-11-05",
+    "updated_at": "2025-08-20"
+  },
+  {
+    "article_id": "KB-005",
+    "title": "Margin calculation discrepancy on invoices",
+    "product_area": "pricing",
+    "symptoms": [
+      "Invoice total doesn't match expected price",
+      "Margin showing wrong value",
+      "Customer override not reflected"
+    ],
+    "root_cause": "Multiple: (a) Customer-level override not inheriting to delivery location, (b) Volume-based tier boundary rounding, (c) Tax stack-on-top ordering.",
+    "resolution": "1. Verify pricing source badge shows 'Customer' or 'delivery location' correctly. 2. Check effective price breakdown in pricing module. 3. If volume-based, verify gallon range boundaries. 4. For tax issues, check tax component ordering.",
+    "created_at": "2025-04-12",
+    "updated_at": "2026-03-18"
+  },
+  {
+    "article_id": "KB-006",
+    "title": "Route optimization producing suboptimal sequences",
+    "product_area": "dispatch",
+    "symptoms": [
+      "Route seems inefficient",
+      "Driver complains about backtracking",
+      "Optimization ignoring time windows"
+    ],
+    "root_cause": "GPS coordinates on customer addresses are inaccurate (geocoding from address text) or delivery time windows are too tight.",
+    "resolution": "1. Verify customer GPS pins on the map. 2. Adjust manually if coordinates are wrong. 3. Review delivery time windows - widen if too restrictive. 4. Re-run optimization after corrections.",
+    "created_at": "2025-08-30",
+    "updated_at": "2025-12-15"
+  },
+  {
+    "article_id": "KB-007",
+    "title": "CSV bulk import errors and formatting",
+    "product_area": "dispatch",
+    "symptoms": [
+      "CSV import failing",
+      "Error: invalid format",
+      "Partial import - some rows skipped"
+    ],
+    "root_cause": "CSV encoding issues (must be UTF-8), date format mismatches (expected YYYY-MM-DD), or required fields missing.",
+    "resolution": "1. Save CSV as UTF-8 (not UTF-8 BOM). 2. Dates must be YYYY-MM-DD format. 3. Required columns: customer_name, product_type, gallons, delivery_date. 4. Remove any commas within quoted fields that break parsing.",
+    "created_at": "2025-02-28",
+    "updated_at": "2025-09-10"
+  },
+  {
+    "article_id": "KB-008",
+    "title": "Customer portal access setup",
+    "product_area": "login_access",
+    "symptoms": [
+      "Customer can't access their portal",
+      "Portal shows 'Access Denied'",
+      "Invitation email not received"
+    ],
+    "root_cause": "Customer portal module not activated for this tenant, or user not created in portal admin.",
+    "resolution": "1. Verify tenant has customer_portal module active. 2. Go to Admin > Portal Users > Add User. 3. Check spam folder for invitation email. 4. If module not active, customer needs to purchase it.",
+    "created_at": "2025-07-15",
+    "updated_at": "2026-01-22"
+  },
+  {
+    "article_id": "KB-009",
+    "title": "GPS tracking delay troubleshooting",
+    "product_area": "integration",
+    "symptoms": [
+      "GPS position updates delayed",
+      "Driver location shows old position",
+      "Tracking lag > 5 minutes"
+    ],
+    "root_cause": "Driver app background location permissions revoked by OS power saving, or poor cellular coverage on route.",
+    "resolution": "1. Check driver phone settings: Location must be 'Always Allow'. 2. Disable battery optimization for the driver app. 3. Check coverage maps for the delivery area. 4. If persistent, try switching between GPS-only and high-accuracy modes.",
+    "created_at": "2024-09-15",
+    "updated_at": "2025-03-20"
+  },
+  {
+    "article_id": "KB-010",
+    "title": "Handling duplicate delivery orders",
+    "product_area": "dispatch",
+    "symptoms": [
+      "Same order appears twice",
+      "Duplicate entries on shift board",
+      "Customer billed twice for same delivery"
+    ],
+    "root_cause": "Double-click on 'Create Order' button before page refresh, or API retry after timeout created duplicate.",
+    "resolution": "1. Delete the duplicate order from the shift board. 2. If already delivered/invoiced, create a credit memo for the duplicate. 3. Idempotency keys should prevent this - check if the client is sending unique request IDs.",
+    "created_at": "2025-05-20",
+    "updated_at": "2026-04-30"
+  },
+  {
+    "article_id": "KB-011",
+    "title": "Tank monitor alert threshold configuration",
+    "product_area": "tank_monitor",
+    "symptoms": [
+      "Not receiving low tank alerts",
+      "Alert triggers at wrong level",
+      "Too many false alerts"
+    ],
+    "root_cause": "Alert threshold set incorrectly, or notification channel (email/SMS) not configured.",
+    "resolution": "1. Go to Tank Monitor > Settings > Alert Thresholds. 2. Set critical level (typically 15-20%). 3. Set warning level (typically 25-30%). 4. Verify notification recipients in alert settings. 5. Test with a manual threshold trigger.",
+    "created_at": "2025-11-10",
+    "updated_at": "2026-03-05"
+  },
+  {
+    "article_id": "KB-012",
+    "title": "Dashboard performance optimization",
+    "product_area": "reporting",
+    "symptoms": [
+      "Dashboard loads slowly",
+      "Page takes 10+ seconds",
+      "Browser tab becomes unresponsive"
+    ],
+    "root_cause": "Dashboard querying too much historical data. Default date range is 'All Time' which pulls millions of rows.",
+    "resolution": "1. Change date range to last 30 or 90 days. 2. Use filters to narrow to specific routes/drivers. 3. If still slow, contact support to check if database indexes need rebuilding.",
+    "created_at": "2024-06-15",
+    "updated_at": "2024-12-20"
+  }
+]
