@@ -112,6 +112,13 @@ def test_billing_tickets_return_no_article_rather_than_a_bad_one(repository):
 
     Surfacing the least-bad match would be worse than saying nothing -- a CSM
     would follow an irrelevant runbook.
+
+    The previous version of this test was vacuous: it asserted no returned article
+    had `product_area == "billing"`, which is trivially true because no such
+    article exists. It passed while ticket #1048 ("Invoice shows wrong gallon
+    count") was being served KB-011 "Tank monitor alert threshold configuration",
+    matched on the word "gallon". This version asserts the behaviour the name
+    claims.
     """
     billing = [
         t for tid in range(1, 13) for t in repository.tickets_for(tid)
@@ -119,8 +126,45 @@ def test_billing_tickets_return_no_article_rather_than_a_bad_one(repository):
     ]
     assert billing, "expected billing tickets in the corpus"
     for source_ticket in billing:
-        for article in find_kb_articles(source_ticket, load_knowledge_base()):
-            assert article.product_area != "billing"
+        assert find_kb_articles(source_ticket, load_knowledge_base()) == ()
+
+
+def test_a_cross_area_article_needs_real_symptom_overlap_to_survive(repository):
+    """The floor must not throw away genuinely useful cross-area matches.
+
+    "Data not flowing to customer portal" is filed under `integration`; the useful
+    article is KB-008 "Customer portal access setup" under `login_access`. It has
+    no area match, so it survives only on symptom overlap -- which is exactly the
+    case the floor is tuned to keep.
+    """
+    ticket = next(
+        t for tid in range(1, 13) for t in repository.tickets_for(tid)
+        if t.subject == "Data not flowing to customer portal"
+    )
+    matched = find_kb_articles(ticket, load_knowledge_base())
+    assert matched and matched[0].article_id == "KB-008"
+
+
+def test_kb_retrieval_quality_across_the_whole_corpus(repository):
+    """A measured floor on retrieval quality, so a scoring change cannot quietly
+    degrade it.
+
+    Measured 2026-08-29: 73 of 85 tickets get a top article from their own product
+    area, 9 correctly get nothing (8 `billing` plus one with no overlap), and 3 are
+    the cross-area customer-portal case above.
+    """
+    kb = load_knowledge_base()
+    same_area = empty = 0
+    for tenant_id in range(1, 13):
+        for ticket in repository.tickets_for(tenant_id):
+            matched = find_kb_articles(ticket, kb)
+            if not matched:
+                empty += 1
+            elif matched[0].product_area == ticket.product_area:
+                same_area += 1
+
+    assert same_area >= 73, f"retrieval degraded: {same_area} same-area top hits"
+    assert empty <= 10, f"too many tickets get no article at all: {empty}"
 
 
 def test_articles_are_ranked_by_area_then_recency(repository):

@@ -365,6 +365,27 @@ about "readings not updating" if the areas differed. At twelve articles that gap
 inspectable; at several hundred it would not be, and embeddings become the right
 answer. The threshold to revisit is roughly when the KB stops fitting in one
 prompt.
+
+**Correction, 2026-08-29.** This entry originally claimed billing tickets "return
+nothing rather than the least-bad match". They did not. There was no relevance
+floor, so any article sharing one word was returned: ticket #1048 "Invoice shows
+wrong gallon count" was served KB-011 "Tank monitor alert threshold configuration"
+because both mention gallons. The test guarding this was vacuous -- it asserted no
+returned article had `product_area == "billing"`, which is trivially true because
+no billing article exists.
+
+Fixed by adding `KB_MIN_SCORE = 10`: an article qualifies by being in the ticket's
+product area, or by matching two independent symptoms. Measured across all 85
+tickets, before and after: same-area top hits stayed at 73, tickets correctly
+served nothing rose from 2 to 9, and the only surviving cross-area match is
+"Data not flowing to customer portal" -> KB-008 "Customer portal access setup",
+which is the case the floor is meant to keep. `test_kb_retrieval_quality_across_the_whole_corpus`
+now pins those numbers so a scoring change cannot quietly degrade retrieval.
+
+**On embeddings, now that it is measured:** the failures are concentrated where the
+KB has no article at all, and no retrieval method can return a document that does
+not exist. Embeddings would change 73/85 by a little and 9/85 by nothing. That is
+the argument against them here -- not corpus size alone.
 **Where it lives:** `src/agent/triage_agent.py:find_kb_articles`, weights in
 `src/config.py`.
 

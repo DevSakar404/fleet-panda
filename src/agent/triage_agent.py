@@ -131,8 +131,10 @@ def find_kb_articles(ticket: Ticket, articles: tuple[KnowledgeArticle, ...]) -> 
     `product_area` is a literal both tickets and articles share -- this is a join
     with a tie-break, not a semantic search problem.
 
-    Returns empty when nothing scores. `billing` tickets have no KB article at
-    all, and surfacing the least-bad match would be worse than saying so.
+    Returns empty when nothing clears `KB_MIN_SCORE`. That floor is the difference
+    between "no article covers this" and "here is the closest thing in the corpus":
+    `billing` tickets have no KB coverage at all, and before the floor existed they
+    were served whatever shared a word with them.
     """
     ticket_words = _tokens(f"{ticket.subject} {ticket.description}")
     scored: list[tuple[int, date, KnowledgeArticle]] = []
@@ -147,7 +149,7 @@ def find_kb_articles(ticket: Ticket, articles: tuple[KnowledgeArticle, ...]) -> 
         if _tokens(article.title) & ticket_words:
             points += config.KB_TITLE_MATCH_POINTS
 
-        if points:
+        if points >= config.KB_MIN_SCORE:
             # Recency is the tie-break, so a refreshed article outranks a stale
             # one of equal relevance. `or date.min` keeps a null updated_at last
             # rather than raising.

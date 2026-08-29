@@ -272,6 +272,17 @@ KB_AREA_MATCH_POINTS: Final[int] = 10
 KB_SYMPTOM_MATCH_POINTS: Final[int] = 4
 KB_TITLE_MATCH_POINTS: Final[int] = 2
 
+# Minimum score for an article to be shown at all. Set to the area-match value, so
+# an article qualifies either by being in the ticket's product area OR by matching
+# two independent symptoms -- incidental overlap on one word is not enough.
+#
+# Without this floor, `billing` tickets (the one area with no KB coverage at all)
+# were served the least-bad match: ticket #1048 "Invoice shows wrong gallon count"
+# returned KB-011 "Tank monitor alert threshold configuration", because both
+# mention gallons. A CSM following that runbook is worse off than one told there is
+# no article.
+KB_MIN_SCORE: Final[int] = 10
+
 # Words too common in this corpus to carry meaning when matching symptoms.
 KB_STOPWORDS: Final[frozenset[str]] = frozenset({
     "the", "a", "an", "is", "are", "not", "no", "and", "or", "for", "to", "in",
