@@ -19,6 +19,8 @@ both fail, something under them broke.
 
 from __future__ import annotations
 
+import os
+
 import pytest
 
 from src.agent.session import TenantContext
@@ -205,8 +207,11 @@ def test_the_date_anchor_matters(run):
 # refused when scoped. They do NOT assert that a real model writes this SQL; that
 # needs an API key and is tracked as OPEN_QUESTIONS.md Q-012.
 #
-# When a key is available, the same expectations are the acceptance target: swap
-# FakeLLM for LLMClient and the assertions should hold unchanged.
+# When a key is available, the same expectations ARE the acceptance target. Set
+# FLEETPANDA_EVAL_LLM=1 and this file runs against the real model instead, with
+# every assertion unchanged -- see `_agent`. That is the evaluation harness: there
+# is no second set of questions, no second set of expected answers, and no report
+# format to keep in sync, because `pytest -v` already prints one line per question.
 
 REFERENCE_SQL = {
     1: f"SELECT COUNT(*) AS deliveries FROM delivery_orders "
@@ -254,8 +259,21 @@ CROSS_TENANT = {1, 2, 7, 8}
 
 
 def _agent(number: int, answer_text: str = "Answer."):
-    """An agent primed to produce the reference SQL for one question."""
+    """An agent primed to produce the reference SQL for one question.
+
+    With FLEETPANDA_EVAL_LLM set, the real client is used instead and nothing is
+    primed -- the model has to write the SQL itself. The assertions below do not
+    change, which is the point: if a real model writes correct SQL it produces the
+    same numbers, so "did it get Q4's status filter right?" is answered by the
+    existing test rather than by a separate scoring rubric. Costs ~2 calls per
+    question. Tracked as OPEN_QUESTIONS.md Q-012.
+    """
     from src.agent.sql_agent import SqlAgent
+
+    if os.environ.get("FLEETPANDA_EVAL_LLM"):
+        from src.llm.client import LLMClient
+
+        return SqlAgent(LLMClient())
 
     return SqlAgent(
         FakeLLM(

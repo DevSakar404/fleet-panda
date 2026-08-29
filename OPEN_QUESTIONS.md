@@ -114,8 +114,10 @@ Eighteen questions below. In priority order:
    resolver and synthesis. This is the largest remaining unknown now that voice
    is written, and Q-017 is the standing proof that a green fake-driven suite
    says nothing about how the real API behaves.
-2. **Then run the eight graded questions against the real model (Q-012).** Swap
-   `FakeLLM` for `LLMClient` in `tests/test_sql_questions.py:_agent`. Expect
+2. **Then run the eight graded questions against the real model (Q-012).** Run
+   `FLEETPANDA_EVAL_LLM=1 pytest tests/test_sql_questions.py -v` — `_agent` swaps
+   to `LLMClient` on that variable and primes nothing, so the model writes the SQL
+   itself while every assertion stays unchanged. One line per question. Expect
    trouble on Q2 ("last month" as a calendar month, not rolling 30 days) and Q4
    (the `status = 'completed'` filter — the difference between 1467.7 and
    1564.92, which no error will ever reveal). This is 15% of the grade and it is
