@@ -20,6 +20,7 @@ from __future__ import annotations
 import os
 import sys
 
+from src import config
 from src.agent.router import ResponseKind, Router, RouterResponse
 from src.agent.session import TenantContext
 from src.agent.triage_agent import TicketBrief
@@ -109,6 +110,24 @@ def format_response(response: RouterResponse) -> str:
     return "\n".join(parts)
 
 
+def _load_env() -> None:
+    """Read `.env` into the environment, if one exists.
+
+    Called from the entrypoint rather than from `LLMClient`: a library should read
+    its configuration from the environment, not decide how the environment got
+    populated. Each entrypoint (this CLI, and later the voice transport) loads it
+    once at startup.
+
+    `override=False` so an exported ANTHROPIC_API_KEY in the shell wins over a
+    stale `.env` -- the opposite is a confusing hour of debugging.
+    """
+    try:
+        from dotenv import load_dotenv
+    except ImportError:  # pragma: no cover - dotenv is pinned in requirements
+        return
+    load_dotenv(config.PROJECT_ROOT / ".env", override=False)
+
+
 def _build_llm() -> LLMClient | None:
     """An LLM if one is configured, otherwise None and a warning.
 
@@ -126,6 +145,7 @@ def _build_llm() -> LLMClient | None:
 
 def main() -> None:
     """Run the terminal chat loop."""
+    _load_env()
     llm = _build_llm()
     router = Router(llm=llm)
     context = TenantContext.platform()
