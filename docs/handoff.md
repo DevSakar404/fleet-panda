@@ -1,0 +1,126 @@
+# Handoff — FleetPanda AI Support Agent
+
+← [README](../README.md) · [Architecture decisions](architecture_decisions.md) · Specs: [tenant isolation](specs/tenant_isolation_spec.md) · [ticket triage](specs/ticket_triage_agent_spec.md)
+
+The living state ledger is [`OPEN_QUESTIONS.md`](../OPEN_QUESTIONS.md) (session
+summary at the top, `Q-NNN` entries below). This document is the fixed-point
+summary: what is done, what is not, and what will bite the next person.
+
+---
+
+## Status
+
+Chat and voice both work end to end. **275 tests pass, no skips.** No test
+requires an API key, a microphone, or a network connection — every agent test
+drives `tests/conftest.py:FakeLLM`. The build history is a sequence of small
+commits, one step per commit (recon → data → database → agent → transports).
+
+The eight graded questions are asserted twice: against hand-written reference SQL,
+and end to end through the agent.
+
+---
+
+## Complete
+
+| Layer | Files | Notes |
+|---|---|---|
+| Config | `src/config.py` | Every path, threshold, weight, and domain mapping, each annotated with the recon finding behind it |
+| Data | `src/data/{loaders,resolver,sources,repository}.py` | Loaders → frozen dataclasses. Resolver cascade fails closed, gating on candidate *count* not score (D-003). `sources.REGISTRY` is the "add a source in one line" seam. `Repository` is the single tenant-filter point for JSON |
+| Database | `src/db/{connection,schema,guard,executor}.py` | Three isolation layers ([spec](specs/tenant_isolation_spec.md)). Guard injects `tenant_id` per SELECT scope — subqueries, derived tables, CTE bodies. Schema card is introspected, not read from `SCHEMA.md` (D-006) |
+| Session | `src/agent/session.py` | `TenantContext` — `TENANT` or `PLATFORM`, frozen, invariant-checked at construction |
+| SQL agent | `src/agent/sql_agent.py` | Two LLM calls (D-007); cross-tenant refusal checked twice (D-008); one retry, not a loop |
+| Escalation | `src/agent/escalation.py` | Pure Python, no LLM. Additive points, account-risk cap (D-010, D-012) |
+| Triage | `src/agent/triage_agent.py` | Five-source fan-in → `TicketBrief` ([spec](specs/ticket_triage_agent_spec.md)). Every section degrades to empty |
+| Router / conversation | `src/agent/{router,conversation}.py` | Router is stateless; `Conversation` owns scope + the confirmation gate, shared by both transports (D-018) |
+| Chat transport | `src/interfaces/cli_chat.py` | Runs without an API key; prints the guard's rewritten SQL beside every answer |
+| Voice transport | `src/interfaces/{voice_chat,speech}.py` | Push-to-talk (D-020); `whisper-1` + `tts-1`; `speech.py` is the only file touching audio. Voice renders our own prose for the ear (D-021) |
+| Docs | this set, plus `DECISIONS.md`, `SECURITY.md`, `RECON.md`, `DESIGN.md` | Cost model, 150-tenant scaling answer, and end-customer isolation answer are all in `DECISIONS.md` |
+
+---
+
+## Pending
+
+| Ref | Item | Estimate |
+|---|---|---|
+| **Q-012** | **The agent has never called a real model.** Every test drives `FakeLLM`. Q-017 is the standing proof this matters: `config` once held a dead model id and a `temperature` param current models reject with a 400, and the whole suite stayed green. Assume more of the same once a key is in. | — |
+| **Q-020** | **Voice has never had a microphone in the loop.** Transcript repair, spoken rendering, and the confirmation gate are all under test; capture, the OpenAI speech calls, and real end-to-end latency are not. The latency figures in D-019 are estimates. | — |
+| **Q-015** | **A pasted ticket body is recognised but not parsed.** `Router.classify` detects a pasted ticket; `_triage` then asks for a ticket number. Needs a free-text ticket schema. | ~1 h |
+| Q-018 | Provider-native **structured outputs** would delete the fence-stripping JSON parser and turn a class of refusal into an impossibility. Best done while watching real responses (during Q-012). | ~30 min |
+| Q-002 | The `product_area → module` map (`billing→invoicing`, `reporting→analytics`) is inferred, not documented. Under-flags by design. Needs FleetPanda domain confirmation. | edit |
+| Q-005 | The −10% materiality cut for "declining volume" (Q8) is provisional. | edit |
+| Q-014 | The escalation weights are a first-pass calibration against a 12-tenant roster. | edit |
+| Q-004 | Recon scripts are not committed (queries are inlined in `RECON.md`). Consider a `scripts/` dir for the live session. | decision |
+
+---
+
+## Known edge cases and limitations
+
+- **Two clocks.** Dispatch queries and the triage snapshot anchor relative
+  windows on `MAX(delivery_date)` (data ends 2026-05-29); escalation contract
+  proximity runs on the real calendar (D-001, D-011). A reader must track which
+  clock a number is on — the agent always states the data anchor.
+- **Layer 3 is a detector, not a guarantee.** The post-execution row assertion
+  can only inspect a `tenant_id` it can see; `SELECT COUNT(*)` projects none.
+  Pinned by `test_the_row_assertion_is_a_detector_not_a_guarantee`; Q-010 argues
+  against a fourth layer.
+- **`SessionScope` is self-asserted.** The caller of `Conversation` chooses
+  `TENANT` vs `PLATFORM`. Fine for a CLI; a deployed service must derive it from
+  the authenticated principal (F1 in `SECURITY.md`, open by design). See the
+  [isolation spec §11](specs/tenant_isolation_spec.md#11-deploying-as-a-service).
+- **Cross-tenant ticket lookups return "not found", not "refused"** — identical
+  to a genuinely missing ticket, to avoid an enumeration oracle over sequential
+  ticket ids (F3).
+- **`billing` tickets get no KB article**, by design — the corpus has no
+  `billing` coverage, and the relevance floor returns nothing rather than a
+  least-bad match.
+- **6 of 12 tenants have no `tank_readings`; 37 of 85 tickets have a null
+  resolution.** Every triage section degrades to empty and is listed in
+  `TicketContext.missing_sources`.
+- **Unparseable SQL is refused, not repaired.** `sqlglot`'s SQLite dialect
+  coverage is a functional limit; the version is pinned.
+- **Fuzzy tenant matches never bind silently.** A normalised or fuzzy resolution
+  returns `CONFIRM` and binds nothing until the next utterance is an explicit
+  affirmative; anything else cancels.
+- **No conversation memory.** Each turn is independent apart from the scope and
+  the pending confirmation held in `Conversation`. `Router` is stateless.
+- **Single user.** No concurrency, no session store, no auth.
+
+---
+
+## How to resume
+
+The next three tasks, from [`OPEN_QUESTIONS.md`](../OPEN_QUESTIONS.md):
+
+1. **Put `OPENAI_API_KEY` in `.env` and speak into it (Q-020).** One utterance —
+   "use C F S" — exercises capture, transcription, transcript repair, the
+   resolver, and synthesis.
+2. **Run the eight graded questions against the real model (Q-012).**
+
+   ```bash
+   FLEETPANDA_EVAL_LLM=1 .venv/bin/python -m pytest tests/test_sql_questions.py -v
+   ```
+
+   `_agent` switches to `LLMClient` on that variable and primes nothing, so the
+   model writes the SQL itself while every assertion stays as it is. One PASS/FAIL
+   line per question is the score. Expect trouble on Q2 ("last month" as a
+   calendar month vs rolling 30 days) and Q4 (the `status = 'completed'` filter —
+   1467.7 vs 1564.92, which no error will ever reveal). This is 15% of the grade
+   and still unverified.
+3. **Parse a pasted ticket body (Q-015).** The last functional gap against the
+   assignment's stated chat behaviour.
+
+Do Q-018 (structured outputs) during task 2, while real responses are on screen.
+
+---
+
+## Where to look during a walkthrough
+
+| Question | File · function |
+|---|---|
+| "Show me tenant isolation" | `src/db/guard.py:_inject_tenant_predicates`, then `_direct_sources` |
+| "How do you know it works?" | `tests/test_tenant_isolation.py` — the deliberately-bypassed-guard test |
+| "How does entity resolution feed the SQL agent?" | `resolver.resolve` → `session.TenantContext` → `guard` takes the id from the context |
+| "Why does it refuse this?" | `session.allows_question` (authority) vs `guard` reasons (the SQL itself) |
+| "Why not a vector DB for triage?" | `triage_agent.find_kb_articles` docstring — 12 articles (D-013) |
+| "Why not LangChain?" | `llm/client.py` — 122 lines, one branch |
+| "Why isn't voice a streaming pipeline?" | `DECISIONS.md` D-019 — the latency table |
