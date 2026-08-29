@@ -405,16 +405,38 @@ than assumed.
 
 ## Three findings, all outside the SQL path
 
-The isolation failures that did exist were in the identity and session layer, which
-the SQL guard never sees. This is the general lesson: hardening the component under
-review moves the weakness to the component that is not.
+Two real defects and one scope observation, all in the identity and session layer
+that the SQL guard never sees. The general lesson holds: hardening the component
+under review moves the weakness to the component that is not.
 
-### F1 — Session scope is self-asserted (High; open)
+### F1 — Session scope is self-asserted (production-readiness gap; open by design)
 
-No authentication anywhere. `use <company>` and `platform` are unguarded runtime
-commands. Not exploitable today (no network surface), blocking for anything
-deployed. Tracked as OPEN_QUESTIONS **Q-019** with a proposed shape; deliberately
-not fixed overnight because it needs a principal model, not a patch.
+No authentication anywhere: `use <company>` and `platform` are unguarded runtime
+commands.
+
+I initially rated this High and called it blocking. That was wrong, and the
+correction matters more than the finding. The assignment describes an **internal**
+user — *"a support rep or CSM"*, FleetPanda employees who legitimately hold
+cross-tenant authority — so `platform` is not escalation, it is their normal
+authority, and a tenant-scoped session is a mode an operator enters rather than a
+cage. The README never mentions authentication, authorization, credentials,
+permissions or access control anywhere in its 238 lines, and that absence is
+consistent rather than an oversight.
+
+**The threat model this system actually defends:** the human operator is trusted;
+**the LLM is not.** Every control in `src/db/guard.py` exists because of the second
+half — a model that can be steered by an injected instruction, or that is simply
+wrong. That is why isolation is enforced by rewriting the query after generation
+rather than by asking for it beforehand.
+
+The observation still holds for a real deployment. The moment the actor changes —
+an HTTP endpoint, a shared host, a voice line reachable by a tenant's staff or
+their end-customers — self-asserted scope becomes a genuine vulnerability, and the
+end-customer agent in DECISIONS.md is precisely that case. Tracked as
+OPEN_QUESTIONS **Q-019** with the structural fix (construct `TenantContext` only
+from a verified principal). Not fixed here, because building an auth boundary the
+assignment does not ask for is inventing scope, and a principal model bolted on
+without design is worse than an honest absence.
 
 ### F2 — `needs_confirmation` computed, displayed, never enforced (High; FIXED)
 

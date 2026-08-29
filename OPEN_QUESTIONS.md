@@ -330,34 +330,54 @@ better done while watching real responses.
 the existing `SqlGeneration` model — it deletes `_parse_generation` entirely and turns a
 whole class of refusal into an impossibility. Roughly 30 minutes including test updates.
 
-### Q-019 · No authentication anywhere — BLOCKING for any deployed surface
-**Context:** Found in a security audit of the implementation (2026-08-29), not of the
-README's exercise snippet. There is no authentication or authorization in this codebase.
-A CLI user selects their own tenant with `use <company>` and escalates to cross-tenant
-access by typing `platform`. Session scope is **self-asserted**.
+### Q-019 · No authentication — production-readiness gap, not an assignment gap
+**Context:** Raised in the 2026-08-29 audit of the implementation. There is no
+authentication or authorization in this codebase: a CLI user selects their own tenant
+with `use <company>` and switches to cross-tenant access by typing `platform`.
 
-This is structurally identical to README vulnerability V1 (`tenant_id = body.get(...)` —
-caller-supplied), which SECURITY.md correctly condemns. The fixed endpoint in that
-document says *"the tenant comes from the verified session, never from the request
-body"*; the interface actually shipped does the opposite. **The documentation currently
-claims a posture the code does not have**, and that gap is the finding as much as the
-missing auth is.
+**Corrected framing (2026-08-29).** I first logged this as *blocking*, and that was
+wrong. A search of the assignment README found **no mention of authentication,
+authorization, credentials, permissions, identity, roles or access control anywhere in
+its 238 lines** — the only "auth" hits are `"role": "user"` inside the sample JSON
+payload. The word "session" appears once in a security sense, at line 76.
 
-**Severity:** not remotely exploitable today — there is no network surface, and the
-"attacker" is whoever already owns the process and the SQLite file. It becomes critical
-the moment any of this is exposed: an HTTP endpoint, a shared host, or a voice line.
+The reason it is absent is that the assignment's user is **internal**. Line 9: *"A
+support rep or CSM types or says 'How many deliveries did Cascade Fuel complete last
+week?'"* Those are FleetPanda employees, not tenant staff, and a CSM legitimately has
+cross-tenant authority — that is the job. So `platform` scope is not privilege
+escalation, it is their normal authority, and a tenant-scoped session is a **mode the
+operator enters**, not a cage they are locked in.
 
-**Taken:** nothing. Fixing it means introducing an auth boundary, a principal model and a
-session store — a larger piece of work than the CLI it would protect, and one that should
-be designed rather than bolted on overnight.
+That makes the threat model clear, and it is not the one I assumed. The assignment asks
+that the **agent** not leak across tenants: the untrusted component is the LLM, which
+may be steered or simply wrong, and the control is the AST guard. It does not ask for an
+authenticated multi-user system, and there is no untrusted human at the keyboard in the
+described deployment.
 
-**Needs you to:** decide the shape before anything ships. My view:
-1. `TenantContext` must only ever be constructed from a verified principal. Make that
-   structural — move `for_tenant()` behind a factory that takes a `Principal`, so
-   "scope this session to tenant 7" is not an expressible operation without one.
-2. `platform` scope requires an explicit internal role, never a runtime command.
-3. Until then, treat the CLI as a local developer tool and say so in the README, rather
-   than letting SECURITY.md imply an auth boundary exists.
+**What survives:** the observation is still correct for a real deployment. The moment any
+of this is exposed — an HTTP endpoint, a shared host, a voice line reachable by a tenant's
+own staff or their end-customers — the actor changes and self-asserted scope becomes a
+genuine vulnerability. The end-customer agent described in DECISIONS.md is exactly that
+case, and it is where this has to be solved first.
 
-Related: F2 (`needs_confirmation` unenforced) and F3 (ticket enumeration oracle) from the
-same audit are **fixed** — see the audit section in SECURITY.md.
+**What does not survive:** calling it blocking, or implying the submission has a gap
+against the brief. It does not.
+
+**Taken:** nothing, deliberately. Building an auth boundary would be inventing scope the
+assignment does not ask for, and a principal model bolted on unattended is worse than an
+honest absence.
+
+**Needs you to:** nothing before submission. Two things worth having ready:
+1. **For the architecture discussion**, if asked what you would add before shipping: make
+   it structural rather than procedural — put `TenantContext.for_tenant()` behind a
+   factory taking a verified `Principal`, so "scope this session to tenant 7" stops being
+   an expressible operation without one. `platform` scope becomes a role, never a runtime
+   command.
+2. **Be able to state the current threat model out loud**: the human operator is trusted,
+   the LLM is not, and every control in `src/db/guard.py` exists because of the second
+   half. That is a more precise answer than "we validate the SQL", and it explains why
+   isolation is enforced after generation rather than requested before it.
+
+**Related:** F2 (`needs_confirmation` unenforced) and F3 (ticket enumeration oracle) from
+the same audit were genuine defects at any threat model and are **fixed** — see the audit
+appendix in SECURITY.md.
