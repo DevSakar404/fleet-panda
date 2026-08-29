@@ -806,3 +806,30 @@ schedule to whoever is on the phone. Concretely:
   text-to-SQL path is the right tool for a trusted internal user exploring data; it
   is more machinery than the question deserves when the question is always one of
   four things and the cost of being wrong is highest.
+
+---
+
+### D-016 · Two providers, one class, one branch
+**Date:** 2026-08-29
+**Context:** The build assumed an Anthropic key; the key actually available is
+OpenAI's. The assignment says "LLM: any provider", so this is a configuration
+problem, not an architecture one.
+**Options considered:**
+- A. `BaseLLMClient` + `AnthropicClient` + `OpenAIClient` + a factory. The
+  textbook answer, and here it is four constructs to abstract one method whose two
+  implementations differ by about six lines.
+- B. `litellm`. One dependency, every provider, and it hides the request shape —
+  which is the thing CLAUDE.md §3.1 says frameworks must not do, and the thing the
+  live session will ask to see.
+- C. One `LLMClient` with a branch, provider selected by whichever key is present.
+**Chosen:** C. `complete()` is the entire surface, so the branch is where the
+difference actually lives. Nothing outside `client.py` changed — `SqlAgent`,
+`TriageAgent` and `Router` are untouched, which is the evidence that the seam was
+in the right place already.
+**Trade-off accepted:** `effort` is Anthropic-only and is **dropped** rather than
+translated on the OpenAI path — a wrong mapping to `reasoning_effort` or a
+temperature would be worse than none, and the parameter is a tuning knob, not a
+correctness control. The cost model above is priced on Claude and would need
+re-running for OpenAI rates. If a third provider ever appears, revisit — at three
+the branch stops being cheaper than the abstraction.
+**Where it lives:** `src/llm/client.py:LLMClient.__init__` and `complete`.

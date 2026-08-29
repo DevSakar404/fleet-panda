@@ -2,6 +2,7 @@
 # Install: uv pip install -r requirements.txt   (or pip, into a 3.11+ venv)
 
 anthropic==1.2.0      # LLM provider SDK, called directly -- no agent framework (CLAUDE.md 3.1)
+openai==3.6.0         # alternative provider; whichever key is set wins (src/llm/client.py)
 sqlglot==30.17.0      # SQL parsing and AST rewriting; the tenant guard is built on it
 rapidfuzz==3.14.5     # fuzzy tenant-name matching for voice/free-text input
 pydantic==2.13.5      # structured LLM output only; loaded data uses stdlib dataclasses

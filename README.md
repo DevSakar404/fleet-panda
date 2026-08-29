@@ -31,7 +31,9 @@ Without `uv`:
 python3.12 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
 ```
 
-An API key is needed only to run the agent, not to run the tests:
+An API key is needed only to run the agent, not to run the tests. Set **one** of
+`ANTHROPIC_API_KEY` or `OPENAI_API_KEY` — the provider is whichever is present
+(Anthropic wins if both are), and nothing outside `src/llm/client.py` knows which:
 
 ```bash
 cp .env.example .env

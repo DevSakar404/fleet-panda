@@ -37,22 +37,41 @@ class LLMResponse:
 
 
 class LLMClient:
-    """Sends prompts to Anthropic and returns text plus token usage."""
+    """Sends prompts to Anthropic or OpenAI and returns text plus token usage.
 
-    def __init__(self, api_key: str | None = None, model: str = config.LLM_MODEL) -> None:
-        key = api_key or os.environ.get("ANTHROPIC_API_KEY")
-        if not key:
+    One class with one branch rather than a base class and two subclasses: there
+    is exactly one method, the two SDKs differ in about six lines, and an
+    interface with two implementations that are each six lines is more code to
+    explain than the thing it abstracts.
+
+    The provider is whichever key is set, Anthropic first if both are. Nothing
+    else in the codebase knows which one is in use.
+    """
+
+    def __init__(self, api_key: str | None = None, model: str | None = None) -> None:
+        anthropic_key = os.environ.get("ANTHROPIC_API_KEY")
+        openai_key = os.environ.get("OPENAI_API_KEY")
+
+        if anthropic_key or (api_key and not openai_key):
+            self.provider = "anthropic"
+            key = api_key or anthropic_key
+            self._model = model or config.ANTHROPIC_MODEL
+            from anthropic import Anthropic  # imported here so the suite needs neither SDK
+
+            self._client = Anthropic(api_key=key)
+        elif openai_key or api_key:
+            self.provider = "openai"
+            key = api_key or openai_key
+            self._model = model or config.OPENAI_MODEL
+            from openai import OpenAI
+
+            self._client = OpenAI(api_key=key)
+        else:
             raise LLMConfigurationError(
-                "ANTHROPIC_API_KEY is not set. Copy .env.example to .env and add your key, "
-                "or export it in the shell. The agent will not start without it."
+                "No API key found. Set ANTHROPIC_API_KEY or OPENAI_API_KEY -- copy "
+                ".env.example to .env and add one, or export it in the shell. The "
+                "agent will not start without it."
             )
-        # Imported here rather than at module scope so that importing this module
-        # (which the test suite does, transitively) does not require the SDK to be
-        # installed or the key to exist.
-        from anthropic import Anthropic
-
-        self._client = Anthropic(api_key=key)
-        self._model = model
 
     def complete(
         self,
@@ -68,17 +87,36 @@ class LLMClient:
         replacement lever -- it controls how much thinking the model does, which
         is the knob that actually matters for both of this system's calls.
         """
-        message = self._client.messages.create(
+        if self.provider == "anthropic":
+            message = self._client.messages.create(
+                model=self._model,
+                max_tokens=max_tokens,
+                output_config={"effort": effort},
+                system=system,
+                messages=[{"role": "user", "content": user}],
+            )
+            return LLMResponse(
+                text="".join(b.text for b in message.content if b.type == "text"),
+                input_tokens=message.usage.input_tokens,
+                output_tokens=message.usage.output_tokens,
+                model=self._model,
+            )
+
+        # OpenAI: the system prompt is a message rather than a parameter, and
+        # `effort` has no equivalent on chat.completions -- it is dropped rather
+        # than translated, because a wrong translation is worse than none.
+        completion = self._client.chat.completions.create(
             model=self._model,
             max_tokens=max_tokens,
-            output_config={"effort": effort},
-            system=system,
-            messages=[{"role": "user", "content": user}],
+            messages=[
+                {"role": "system", "content": system},
+                {"role": "user", "content": user},
+            ],
         )
-        text = "".join(block.text for block in message.content if block.type == "text")
+        usage = completion.usage
         return LLMResponse(
-            text=text,
-            input_tokens=message.usage.input_tokens,
-            output_tokens=message.usage.output_tokens,
+            text=completion.choices[0].message.content or "",
+            input_tokens=usage.prompt_tokens if usage else 0,
+            output_tokens=usage.completion_tokens if usage else 0,
             model=self._model,
         )

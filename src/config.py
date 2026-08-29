@@ -26,7 +26,10 @@ KNOWLEDGE_BASE_PATH: Final[Path] = DATA_DIR / "knowledge_base.json"
 
 # --- LLM ---------------------------------------------------------------------
 
-LLM_MODEL: Final[str] = "claude-opus-5"
+# Provider is chosen by whichever key is present (see llm/client.py). Two models
+# because the ids are not interchangeable; everything else about the call is.
+ANTHROPIC_MODEL: Final[str] = "claude-opus-5"
+OPENAI_MODEL: Final[str] = "gpt-4o-mini"
 LLM_MAX_TOKENS: Final[int] = 2048
 
 # Effort replaces temperature on current Claude models. `temperature` (and

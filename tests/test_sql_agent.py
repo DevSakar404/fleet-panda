@@ -185,3 +185,36 @@ def test_an_empty_result_is_answered_not_refused():
 
     assert not answer.refused
     assert answer.is_empty
+
+
+# --- provider selection -------------------------------------------------------
+
+@pytest.mark.parametrize(
+    "env, expected",
+    [
+        ({"ANTHROPIC_API_KEY": "k"}, "anthropic"),
+        ({"OPENAI_API_KEY": "k"}, "openai"),
+        ({"ANTHROPIC_API_KEY": "k", "OPENAI_API_KEY": "k"}, "anthropic"),
+        ({"ANTHROPIC_API_KEY": "", "OPENAI_API_KEY": "k"}, "openai"),
+    ],
+)
+def test_provider_is_whichever_key_is_set(monkeypatch, env, expected):
+    """Empty-string keys must not count -- a blank line in .env is not a key."""
+    from src.llm.client import LLMClient
+
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    for name, value in env.items():
+        monkeypatch.setenv(name, value)
+
+    assert LLMClient().provider == expected
+
+
+def test_no_key_at_all_raises_naming_both_options(monkeypatch):
+    from src.llm.client import LLMClient, LLMConfigurationError
+
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+
+    with pytest.raises(LLMConfigurationError, match="ANTHROPIC_API_KEY or OPENAI_API_KEY"):
+        LLMClient()
