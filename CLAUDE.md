@@ -178,74 +178,55 @@ and one sentence on what a production system would need to do about it.
 
 ---
 
-## 7. Scope for THIS session (foundation only)
+## 7. Current state and what is next
 
-Build, in this order. Commit after each numbered step with a clear message.
+**Authoritative source for state: the session summary at the top of
+`OPEN_QUESTIONS.md`.** This section is a map; that file is the ledger, and it is
+updated every session.
 
-**Step 0 — Recon.** Explore the data before writing application code. Write
-findings to `RECON.md` and append anomalies to DECISIONS.md. At minimum:
-- table names, row counts, column types, and the real date range of the data
-- distinct values of every status/enum-like column (`status`, `fuel_type`,
-  truck status, order type) — the exact literals matter for the SQL prompt
-- null rates on the columns the eight test questions depend on
-- rows where `gallons_delivered > gallons_ordered` or either is null (this breaks
-  fill rate)
-- **for every `tenant_name` in `call_transcripts.json`, attempt resolution against
-  `customers.json` + `tenant_aliases.json` and list every failure or ambiguity.**
-  This list becomes the entity-resolution test fixture.
-- tenants present in one source but absent from another
-- tickets referencing modules not in that tenant's `active_modules`
+### Built and tested
 
-**Step 1 — Data layer.** `config.py`, `loaders.py`, `resolver.py`, `sources.py`,
-`repository.py`, plus `tests/test_entity_resolution.py` written alongside, seeded
-with the real failure cases from recon.
+| Layer | Files | Notes |
+|---|---|---|
+| Data | `config.py`, `data/{loaders,resolver,sources,repository}.py` | Resolver cascade is exact canonical → exact alias → normalized → fuzzy → refuse. It gates on **candidate count, not score** (D-003). |
+| Database | `db/{connection,schema,guard,executor}.py` | Three isolation layers. The guard injects `tenant_id` per SELECT scope, including subqueries, derived tables and CTE bodies. |
+| Session | `agent/session.py` | `TenantContext`: TENANT or PLATFORM. Questions 1, 2, 7 and 8 are cross-tenant and are refused when scoped. |
+| Agent | `agent/{sql_agent,escalation,triage_agent,router}.py` | Two LLM calls per question (D-007); escalation is pure Python (D-010, D-012); triage fans in five sources. |
+| Transport | `interfaces/cli_chat.py` | Runs without an API key — triage, scoping and every refusal path are deterministic. |
+| Docs | `RECON.md`, `DESIGN.md`, `DECISIONS.md`, `SECURITY.md`, `OPEN_QUESTIONS.md` | All assignment deliverables written except voice. |
 
-Resolver cascade, in order: exact canonical → exact alias → normalized (lowercase,
-strip punctuation and legal suffixes like Inc/LLC/Co) → `rapidfuzz`
-`token_set_ratio` above the threshold in `config.py` → **`Unresolved` with ranked
-candidates**. Return a result object carrying the match method and confidence, not
-a bare int — voice mode needs that to decide whether to confirm.
+**No stubs remain. 202 tests pass.** The eight graded questions are asserted twice:
+against hand-written reference SQL, and end to end through the agent.
 
-**Step 2 — Database layer.** `connection.py`, `schema.py`, `guard.py`,
-`executor.py`, plus `tests/test_tenant_isolation.py` and `tests/test_security.py`.
+### Not built
 
-Build the guard **before** anything can call the LLM, so an unguarded query is
-never executed even once.
+- **Voice mode (Step 5)** — the only remaining assignment deliverable. No STT, no
+  TTS, no audio path. `ResolutionResult.needs_confirmation` and
+  `SqlAnswer.date_anchor` already exist to drive read-back and the staleness
+  caveat; design around the latency budget (two LLM calls per question).
+- **Pasted-ticket parsing** — `Router.classify` recognises a pasted ticket body but
+  `_triage` needs an id, so triage works by ticket number only (Q-015).
 
-Guard requirements:
-- parse with `sqlglot.parse_one(sql, dialect="sqlite")`; reject on parse failure
-- reject anything that is not exactly one `SELECT` statement
-- reject `ATTACH`, `PRAGMA`, `sqlite_master`, and any DDL/DML node type
-- enforce a table allowlist derived from schema introspection
-- when a `TenantContext` is bound, inject `tenant_id = <id>` into every
-  tenant-scoped table reference, including inside subqueries and CTEs
-- force a `LIMIT` if absent
-- return a structured `GuardResult` (allowed, rewritten_sql, reasons) — never
-  raise a bare exception, the agent needs the reasons for its refusal message
+### Two things that will bite a new session
 
-Executor requirements: row cap, wall-clock timeout via `set_progress_handler`,
-and a post-execution assertion that no returned row carries a foreign `tenant_id`.
+1. **The test suite cannot catch anything about how the real API is called.** Every
+   agent test drives `tests/conftest.py:FakeLLM`. `config.LLM_MODEL` once held a
+   model ID that no longer exists and the client passed a `temperature` parameter
+   that current models reject with a 400 — both sat there while the whole suite
+   passed (Q-017). Verify current model IDs and parameters before writing API code.
+2. **The data ends 2026-05-29.** Anchored on `date('now')`, four of the eight graded
+   questions return zero rows. Relative windows anchor on `MAX(delivery_date)` and
+   the agent states the anchor in its reply (D-001). Contract proximity is the
+   exception — it runs on the real calendar (D-011). Two clocks, deliberately.
 
-**Step 3 — Skeletons and scaffolding.** `session.py` (TenantContext),
-`llm/client.py` (thin wrapper; if `ANTHROPIC_API_KEY` is absent, it must raise a
-clear configuration error, not silently stub), `llm/prompts.py`, and **stub
-files with docstrings and `NotImplementedError`** for `router.py`,
-`sql_agent.py`, `triage_agent.py`, `escalation.py`, `cli_chat.py`. Each stub's
-docstring describes the intended data flow so the next session is a fill-in.
+### How the foundation was built
 
-Also write `tests/test_sql_questions.py` with all eight questions parametrized
-and marked `xfail` or skipped, each with a docstring noting the ambiguity to
-resolve (e.g. does "last 30 days" anchor on `MAX(date)` in the data or on `now()`).
+Steps 0–3 (recon → data layer → database layer → scaffolding) are complete and are
+in git history, one commit per step. The requirements they were built against —
+the resolver cascade, the guard's rejection list, the executor's limits — are now
+documented where the code is: module docstrings, `DESIGN.md`, and the decision
+entries that explain why each is shaped as it is.
 
-`README.md`: setup, env vars, how to run tests. `SECURITY.md`: headings only.
-
-### Explicitly OUT of scope this session
-
-Do not build: voice mode, any web UI, FastAPI, the triage prompt, the escalation
-rules, the SECURITY.md write-up, the cost model, or the scaling essay. Do not
-make live LLM API calls. Do not write code that depends on an API key existing.
-
----
 
 ## 8. Rules of engagement
 

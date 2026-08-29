@@ -160,91 +160,126 @@ class KnowledgeArticle:
 @lru_cache(maxsize=1)
 def load_tenants() -> tuple[Tenant, ...]:
     """Load customers.json. Cached: the file is read-only and read many times."""
-    return tuple(
-        Tenant(
-            tenant_id=row["tenant_id"],
-            name=row["name"],
-            health_score=row["health_score"],
-            carr=row["carr"],
-            # NOTE: the key is `modules_active`, not `active_modules` as CLAUDE.md
-            # section 7 has it. See OPEN_QUESTIONS.md Q-006.
-            modules_active=frozenset(row["modules_active"]),
-            contract_end_date=_parse_date(row.get("contract_end_date")),
-            assigned_csm=row["assigned_csm"],
-            fleet_size=row["fleet_size"],
-            onboarding_status=row["onboarding_status"],
-            region=row["region"],
+    seen_ids: set[int] = set()
+    tenants: list[Tenant] = []
+    for row in _read_json_array(config.CUSTOMERS_PATH):
+        tenant_id = row["tenant_id"]
+        if tenant_id in seen_ids:
+            raise DataFileError(f"Duplicate tenant_id {tenant_id} in {config.CUSTOMERS_PATH.name}")
+        seen_ids.add(tenant_id)
+        tenants.append(
+            Tenant(
+                tenant_id=tenant_id,
+                name=row["name"],
+                health_score=row["health_score"],
+                carr=row["carr"],
+                # NOTE: the key is `modules_active`, not `active_modules` as CLAUDE.md
+                # section 7 has it. See OPEN_QUESTIONS.md Q-006.
+                modules_active=frozenset(row["modules_active"]),
+                contract_end_date=_parse_date(row.get("contract_end_date")),
+                assigned_csm=row["assigned_csm"],
+                fleet_size=row["fleet_size"],
+                onboarding_status=row["onboarding_status"],
+                region=row["region"],
+            )
         )
-        for row in _read_json_array(config.CUSTOMERS_PATH)
-    )
+    return tuple(tenants)
 
 
 @lru_cache(maxsize=1)
 def load_tenant_aliases() -> tuple[TenantAlias, ...]:
     """Load tenant_aliases.json."""
-    return tuple(
-        TenantAlias(alias=row["alias"], canonical_name=row["canonical_name"], tenant_id=row["tenant_id"])
-        for row in _read_json_array(config.TENANT_ALIASES_PATH)
-    )
+    seen_aliases: set[str] = set()
+    aliases: list[TenantAlias] = []
+    for row in _read_json_array(config.TENANT_ALIASES_PATH):
+        alias = row["alias"]
+        if alias in seen_aliases:
+            raise DataFileError(f"Duplicate alias {alias!r} in {config.TENANT_ALIASES_PATH.name}")
+        seen_aliases.add(alias)
+        aliases.append(
+            TenantAlias(alias=alias, canonical_name=row["canonical_name"], tenant_id=row["tenant_id"])
+        )
+    return tuple(aliases)
 
 
 @lru_cache(maxsize=1)
 def load_tickets() -> tuple[Ticket, ...]:
     """Load tickets.json."""
-    return tuple(
-        Ticket(
-            ticket_id=row["ticket_id"],
-            tenant_id=row["tenant_id"],
-            tenant_name=row["tenant_name"],
-            subject=row["subject"],
-            description=row["description"],
-            product_area=row["product_area"],
-            status=row["status"],
-            priority=row["priority"],
-            submitter_name=row["submitter_name"],
-            submitter_email=row["submitter_email"],
-            created_at=_parse_date(row.get("created_at")),
-            updated_at=_parse_date(row.get("updated_at")),
-            resolution=row.get("resolution"),
-            agent_name=row["agent_name"],
+    seen_ids: set[int] = set()
+    tickets: list[Ticket] = []
+    for row in _read_json_array(config.TICKETS_PATH):
+        ticket_id = row["ticket_id"]
+        if ticket_id in seen_ids:
+            raise DataFileError(f"Duplicate ticket_id {ticket_id} in {config.TICKETS_PATH.name}")
+        seen_ids.add(ticket_id)
+        tickets.append(
+            Ticket(
+                ticket_id=ticket_id,
+                tenant_id=row["tenant_id"],
+                tenant_name=row["tenant_name"],
+                subject=row["subject"],
+                description=row["description"],
+                product_area=row["product_area"],
+                status=row["status"],
+                priority=row["priority"],
+                submitter_name=row["submitter_name"],
+                submitter_email=row["submitter_email"],
+                created_at=_parse_date(row.get("created_at")),
+                updated_at=_parse_date(row.get("updated_at")),
+                resolution=row.get("resolution"),
+                agent_name=row["agent_name"],
+            )
         )
-        for row in _read_json_array(config.TICKETS_PATH)
-    )
+    return tuple(tickets)
 
 
 @lru_cache(maxsize=1)
 def load_call_transcripts() -> tuple[CallTranscript, ...]:
     """Load call_transcripts.json."""
-    return tuple(
-        CallTranscript(
-            call_id=row["call_id"],
-            tenant_name=row["tenant_name"],
-            participants=tuple(row.get("participants", ())),
-            topic=row["topic"],
-            summary=row["summary"],
-            sentiment=row["sentiment"],
-            action_items=tuple(row.get("action_items", ())),
-            call_date=_parse_date(row.get("date")),
-            duration_minutes=row.get("duration_minutes", 0),
-            competitor_mentioned=bool(row.get("competitor_mentioned", False)),
+    seen_ids: set[str] = set()
+    transcripts: list[CallTranscript] = []
+    for row in _read_json_array(config.CALL_TRANSCRIPTS_PATH):
+        call_id = row["call_id"]
+        if call_id in seen_ids:
+            raise DataFileError(f"Duplicate call_id {call_id!r} in {config.CALL_TRANSCRIPTS_PATH.name}")
+        seen_ids.add(call_id)
+        transcripts.append(
+            CallTranscript(
+                call_id=call_id,
+                tenant_name=row["tenant_name"],
+                participants=tuple(row.get("participants", ())),
+                topic=row["topic"],
+                summary=row["summary"],
+                sentiment=row["sentiment"],
+                action_items=tuple(row.get("action_items", ())),
+                call_date=_parse_date(row.get("date")),
+                duration_minutes=row.get("duration_minutes", 0),
+                competitor_mentioned=bool(row.get("competitor_mentioned", False)),
+            )
         )
-        for row in _read_json_array(config.CALL_TRANSCRIPTS_PATH)
-    )
+    return tuple(transcripts)
 
 
 @lru_cache(maxsize=1)
 def load_knowledge_base() -> tuple[KnowledgeArticle, ...]:
     """Load knowledge_base.json."""
-    return tuple(
-        KnowledgeArticle(
-            article_id=row["article_id"],
-            title=row["title"],
-            product_area=row["product_area"],
-            symptoms=tuple(row.get("symptoms", ())),
-            root_cause=row["root_cause"],
-            resolution=row["resolution"],
-            created_at=_parse_date(row.get("created_at")),
-            updated_at=_parse_date(row.get("updated_at")),
+    seen_ids: set[str] = set()
+    articles: list[KnowledgeArticle] = []
+    for row in _read_json_array(config.KNOWLEDGE_BASE_PATH):
+        article_id = row["article_id"]
+        if article_id in seen_ids:
+            raise DataFileError(f"Duplicate article_id {article_id!r} in {config.KNOWLEDGE_BASE_PATH.name}")
+        seen_ids.add(article_id)
+        articles.append(
+            KnowledgeArticle(
+                article_id=article_id,
+                title=row["title"],
+                product_area=row["product_area"],
+                symptoms=tuple(row.get("symptoms", ())),
+                root_cause=row["root_cause"],
+                resolution=row["resolution"],
+                created_at=_parse_date(row.get("created_at")),
+                updated_at=_parse_date(row.get("updated_at")),
+            )
         )
-        for row in _read_json_array(config.KNOWLEDGE_BASE_PATH)
-    )
+    return tuple(articles)

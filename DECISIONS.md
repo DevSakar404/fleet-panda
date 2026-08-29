@@ -418,6 +418,43 @@ direction the layering otherwise avoids -- kept under `TYPE_CHECKING` so there i
 no runtime cycle, but it is a wart. 311 and 180 lines respectively.
 **Where it lives:** `src/llm/prompts.py:build_triage_payload`.
 
+### D-016 · Duplicate-key detection lives in the loaders, not the repository
+**Date:** 2026-08-29
+**Context:** The loaders are the trust boundary between raw JSON and typed records,
+and nothing enforced key uniqueness across it. Recon verified there are no duplicate
+keys in the five shipped files, but that is a fact about today's fixtures rather than
+a guarantee — and the failure mode is silent. A duplicate `tenant_id` in
+`customers.json` would flow into `Repository._tenants_by_id`, which is a dict
+comprehension: last row wins, no error, and a tenant's health score, CARR and
+contract date could quietly belong to a different record than the one recon
+inspected. Escalation reads all three.
+**Options considered:**
+- A. Nothing, on the grounds that recon checked. That check expires the moment
+  anyone refreshes `data/`, and nothing would say so.
+- B. Validate once in `Repository`. One place to audit, but `Repository` is not the
+  only consumer — `sources.py` and the tests call the loaders directly, so the
+  check would sit beside the boundary rather than on it.
+- C. Validate in each loader as it parses, raising the existing `DataFileError`.
+**Chosen:** C. The check belongs where the untrusted shape is read, which is the
+same argument CLAUDE.md §2 makes for stopping on a missing file rather than
+generating fixtures. Reusing `DataFileError` keeps the failure indistinguishable
+from the other ways a data file can be unusable, which is what a caller wants.
+**Trade-off accepted:** five comprehensions became explicit loops and the module
+grew 250 → 285 lines, which is real readability cost against the
+explain-it-out-loud constraint in §1 (still inside §6's ~350 ceiling). The checks
+are also unreachable with the shipped data, so their only coverage is the six
+synthetic-fixture tests in `tests/test_loaders.py` — they are guarding a future,
+not a present.
+**Worth noting what this does *not* cover:** uniqueness is checked per file, so
+cross-file integrity is still unguarded — a ticket whose `tenant_id` is absent from
+`customers.json` would raise `UnknownTenantError` deep in a brief rather than at
+load. The alias table is the one place where a duplicate was already safe:
+`_build_index` accumulates claims into a set and `TenantResolver` refuses when a key
+maps to more than one tenant (D-003), so that loader check is belt to existing
+braces.
+**Where it lives:** `src/data/loaders.py` (all five `load_*` functions),
+`tests/test_loaders.py`.
+
 ---
 
 ## Data quality observations
