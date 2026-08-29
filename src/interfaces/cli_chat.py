@@ -1,10 +1,13 @@
-"""Terminal chat transport. A thin shell over the router.
+"""Terminal chat transport. A thin shell over the conversation.
 
-Owned by: the interfaces layer. Called by the user. Calls: `Router`.
+Owned by: the interfaces layer. Called by the user. Calls: `Conversation`.
 
 A transport, not an implementation (CLAUDE.md section 2) -- it turns typed lines
-into `route()` calls and formats what comes back. The voice interface in Step 5 is
-a sibling of this file and shares everything below `route`.
+into `Conversation.handle()` calls and formats what comes back. `voice_chat.py` is
+the sibling of this file: same `Conversation`, same `RouterResponse`, different
+rendering. Nothing about scope, tenant binding or the confirmation gate lives
+here, which is what makes "the same intelligence in both modes" structural rather
+than a promise.
 
 It runs without an API key: tenant binding, ticket triage and every refusal path
 are deterministic. Only data questions need a model, and the absence of one
@@ -17,10 +20,8 @@ predicate that was never in the model's output.
 
 from __future__ import annotations
 
-import os
-import sys
-
 from src import config
+from src.agent.conversation import Conversation
 from src.agent.router import ResponseKind, Router, RouterResponse
 from src.agent.session import TenantContext
 from src.agent.triage_agent import TicketBrief
@@ -147,77 +148,31 @@ def main() -> None:
     """Run the terminal chat loop."""
     _load_env()
     llm = _build_llm()
-    router = Router(llm=llm)
-    context = TenantContext.platform()
-    # A tenant identified by an inexact match, held until the user says yes.
-    # Nothing binds it; the session stays on its previous scope until confirmed.
-    pending_tenant: int | None = None
+    conversation = Conversation(Router(llm=llm))
 
     print(BANNER)
-    while True:
+    while not conversation.finished:
         try:
-            line = input(f"[{_prompt_label(context)}] > ").strip()
+            line = input(f"[{_prompt_label(conversation.context)}] > ").strip()
         except (EOFError, KeyboardInterrupt):
             print()
             return
 
         if not line:
             continue
-        lowered = line.lower()
 
-        # A pending confirmation consumes the next line, whatever it is. Anything
-        # other than an explicit yes cancels -- silence or an unrelated answer
-        # must never be read as consent, which over voice is the difference
-        # between scoping to the right customer and the wrong one.
-        if pending_tenant is not None:
-            if lowered in ("yes", "y", "yeah", "yep", "correct", "that's right"):
-                context = TenantContext.for_tenant(pending_tenant)
-                print(f"  {_scope_description(context)}\n")
-            else:
-                print("  Cancelled -- scope unchanged. Try the full company name "
-                      "or its short code.\n")
-            pending_tenant = None
-            continue
-
-        if lowered in ("quit", "exit"):
-            return
-        if lowered in ("help", "?"):
+        # `help` is presentation, so it stays here rather than in Conversation --
+        # the banner is a terminal artefact and voice mode says something else
+        # entirely. Everything that changes session state goes through handle().
+        if line.lower() in ("help", "?"):
             print(BANNER)
             continue
-        if lowered == "scope":
-            print(f"  {_scope_description(context)}\n")
-            continue
-        if lowered == "platform":
-            context = TenantContext.platform()
-            print("  Switched to an internal platform session. Cross-tenant "
-                  "questions are allowed here.\n")
-            continue
-        if lowered.startswith(("use tenant ", "use ")):
-            name = line.split(" ", 2)[-1] if lowered.startswith("use tenant ") else line[4:]
-            response = router.resolve_tenant(name.strip())
-            print(f"  {response.text}\n")
 
-            # The response carries the tenant id, so the resolver runs once and
-            # this file never reaches into the router's internals to recover an
-            # id it was already handed.
-            if response.kind is ResponseKind.CONFIRM:
-                pending_tenant = response.tenant_id
-            elif response.kind is ResponseKind.ANSWER and response.tenant_id is not None:
-                context = TenantContext.for_tenant(response.tenant_id)
-            continue
-
-        print(format_response(router.route(line, context)) + "\n")
+        print(format_response(conversation.handle(line)) + "\n")
 
 
 def _prompt_label(context: TenantContext) -> str:
     return "platform" if not context.is_bound else f"tenant {context.tenant_id}"
-
-
-def _scope_description(context: TenantContext) -> str:
-    if context.is_bound:
-        return (f"Scoped to tenant {context.tenant_id}. Cross-tenant questions "
-                f"will be refused, and every query is filtered to this tenant.")
-    return "Internal platform session. Cross-tenant questions are allowed."
 
 
 if __name__ == "__main__":
