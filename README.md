@@ -4,14 +4,16 @@ A voice-and-chat support agent for FleetPanda's dispatch platform. It answers
 natural-language questions about the dispatch database with hard multi-tenant
 isolation, and triages incoming support tickets against five data sources.
 
-> **Build status: chat mode works end to end. Voice mode not started.** Data
-> layer, database layer, isolation guard, SQL agent, escalation scoring, triage
-> pipeline, router and CLI are all built and tested. No stubs remain.
+> **Build status: chat and voice both work end to end.** Data layer, database
+> layer, isolation guard, SQL agent, escalation scoring, triage pipeline, router,
+> and both transports are built and tested. No stubs remain. 275 tests pass.
 >
-> Two caveats worth reading before a demo: the agent has never spoken to a real
-> model (no API key here — its tests drive it with a scripted fake, Q-012), and a
-> *pasted* ticket body is recognised but not yet parsed, so triage works by ticket
-> id only (Q-015). See
+> Three caveats worth reading before a demo. The agent has never spoken to a real
+> model (no API key on the build machine — its tests drive it with a scripted
+> fake, Q-012). Voice mode is verified as far as it can be without a microphone:
+> transcript repair, spoken rendering and the confirmation gate are all under
+> test, but nobody has yet spoken into it (Q-020). And a *pasted* ticket body is
+> recognised but not yet parsed, so triage works by ticket id only (Q-015). See
 > [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md) for the session summary and next tasks.
 >
 > The assignment brief as received is preserved in git history at commit
@@ -45,8 +47,9 @@ cp .env.example .env
 .venv/bin/python -m pytest tests/ -q
 ```
 
-198 pass, no skips. The eight graded questions are asserted twice: once against
-hand-written reference SQL, and once end to end through the agent.
+275 pass, no skips. The eight graded questions are asserted twice: once against
+hand-written reference SQL, and once end to end through the agent. No test needs
+an API key, a microphone or a network connection.
 
 To see the isolation tests alone — the ones worth reading first:
 
@@ -83,7 +86,54 @@ platform           -> then triage 1083 works
 
 ## Voice mode
 
-Not yet started.
+```bash
+.venv/bin/python -m src.interfaces.voice_chat
+```
+
+Push to talk: press Enter to start recording, Enter again to stop. Requires
+`OPENAI_API_KEY` — it drives both speech recognition (`whisper-1`) and synthesis
+(`tts-1`), so one OpenAI key runs the whole system. macOS will ask for microphone
+permission on the first run; grant it to the terminal application, not to Python.
+
+```
+[platform] press Enter to speak >
+  recording... (press Enter to stop)
+  you said: "use CFS"
+  thinking...
+  Scoped to Cascade Fuel Services (tenant 1).
+
+[tenant 1] press Enter to speak >
+  you said: "how many emergency orders in the past 30 days"
+  ♪ "In the 30 days to 29 May 2026, the most recent data available,
+     Cascade Fuel Services had 17 emergency orders."
+
+  SQL   SELECT COUNT(*) AS n FROM delivery_orders WHERE priority = 'emergency'
+        AND order_date >= date((SELECT MAX(delivery_date) ...), '-30 day')
+        AND delivery_orders.tenant_id = 1 LIMIT 200
+```
+
+Voice and chat are two renderings of one session. `Conversation`
+(`src/agent/conversation.py`) owns the scope and the confirmation gate; the two
+transports only decide how to say things. The differences are all in the
+rendering:
+
+| | Chat | Voice |
+|---|---|---|
+| Data answer | prose **+ the executed SQL** | prose only — SQL is on screen, never read aloud |
+| Ticket brief | the full ~25-line brief | level, score, top two reasons, "the full brief is on screen" |
+| Dates | `2026-07-15` | "15 July 2026" |
+| Inexact tenant name | confirm before binding | *same gate, inherited* |
+
+Two voice-specific details worth knowing about:
+
+- **Spelled-out short codes.** Speech-to-text renders `"use CFS"` as `"use C F S"`.
+  The resolver normalises case but not spacing, so the run is collapsed before
+  resolution (`normalize_transcript`). Whisper also punctuates commands, so
+  `"Platform."` is stripped to `platform`.
+- **Confirmation is load-bearing here.** An inexact name returns `CONFIRM` and
+  binds nothing until the next utterance is an explicit yes. Speech-to-text
+  produces exactly these near-misses, and anything other than yes — including
+  silence or a new question — cancels.
 
 ## How tenant isolation works
 
@@ -113,7 +163,7 @@ platform ranking is a wrong answer that looks right.
 | [DESIGN.md](DESIGN.md) | How the pieces fit: request flows, the three isolation layers, module boundaries. |
 | [DECISIONS.md](DECISIONS.md) | Engineering journal, appended as decisions were made. |
 | [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md) | Session summary, and questions needing a human. |
-| [SECURITY.md](SECURITY.md) | Code-review challenge. Outline only so far. |
+| [SECURITY.md](SECURITY.md) | Code-review challenge: three vulnerabilities, attack scenarios, fixes. |
 
 ## Layout
 
@@ -132,14 +182,17 @@ src/
     guard.py         sqlglot AST validation + tenant predicate injection
     executor.py      row cap, timeout, post-execution tenant assertion
   llm/
-    client.py        thin Anthropic wrapper
+    client.py        thin provider wrapper (Anthropic or OpenAI, one branch)
     prompts.py       every system prompt, in one file
   agent/
     session.py       TenantContext: who is asking, and what they may see
-    router.py               intent classification and dispatch
+    router.py               intent classification and dispatch (stateless)
+    conversation.py         session state: scope + the confirmation gate
     sql_agent.py            question -> guarded SQL -> answer
     triage_agent.py         ticket -> five-source brief
     escalation.py           deterministic scoring, no LLM
   interfaces/
-    cli_chat.py             terminal transport
+    cli_chat.py             terminal transport, renders for the eye
+    voice_chat.py           voice transport, renders for the ear
+    speech.py               the only file that touches audio
 ```

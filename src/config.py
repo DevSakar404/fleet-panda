@@ -294,3 +294,32 @@ KB_STOPWORDS: Final[frozenset[str]] = frozenset({
 # the prompt stays small and the CSM can scan it.
 BRIEF_MAX_PAST_TICKETS: Final[int] = 5
 BRIEF_MAX_CALLS: Final[int] = 3
+
+
+# --- Voice mode (D-019, D-020, D-021) ----------------------------------------
+
+# 16 kHz mono. Whisper resamples to 16 kHz internally, so recording at 44.1 kHz
+# uploads roughly three times the bytes for identical text -- and upload is a
+# real share of speech-to-text latency on a home connection.
+AUDIO_SAMPLE_RATE: Final[int] = 16_000
+
+STT_MODEL: Final[str] = "whisper-1"
+TTS_MODEL: Final[str] = "tts-1"        # `tts-1-hd` is slower for no gain over a laptop speaker
+TTS_VOICE: Final[str] = "nova"
+
+# Pinned rather than auto-detected. A two-second clip of a company name gives the
+# language detector very little, and it occasionally reads a short English
+# utterance as another language -- which turns a tenant name into nonsense before
+# the resolver ever sees it.
+SPEECH_LANGUAGE: Final[str] = "en"
+
+# Escalation reasons read aloud in a spoken brief. The terminal still prints all
+# of them. Two is what fits in a sentence a listener can hold, and the reasons are
+# already ordered by the signal that produced them.
+SPOKEN_BRIEF_MAX_REASONS: Final[int] = 2
+
+# Spelled-out short codes come back from speech-to-text as separated letters:
+# "use CFS" is transcribed "use C F S". A run of at least this many single letters
+# is collapsed back into one token before resolution. Two would fire on ordinary
+# English ("a b"), three is the shortest real alias in the table.
+SPOKEN_ACRONYM_MIN_LETTERS: Final[int] = 3

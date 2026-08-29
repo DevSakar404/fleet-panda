@@ -7,3 +7,5 @@ sqlglot==30.17.0      # SQL parsing and AST rewriting; the tenant guard is built
 rapidfuzz==3.14.5     # fuzzy tenant-name matching for voice/free-text input
 pydantic==2.13.5      # structured LLM output only; loaded data uses stdlib dataclasses
 python-dotenv==1.2.3  # reads ANTHROPIC_API_KEY from .env in local development
+sounddevice==0.5.2    # microphone capture and playback for voice mode; wheels bundle PortAudio
+numpy==2.3.4          # the buffer type sounddevice records into and plays back

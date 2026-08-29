@@ -2,8 +2,37 @@
 
 ## Session summary
 
-**Updated 2026-08-29 (overnight session). Chat mode works end to end. No stubs
-remain. 198 tests pass. Eleven commits.**
+**Updated 2026-08-29 (voice session). Chat and voice both work end to end.
+275 tests pass. Fourteen commits.**
+
+### This session: voice mode (Step 5)
+
+`Conversation` extracted first (D-018), then the transport built on top:
+
+| Built | State |
+|---|---|
+| `agent/conversation.py` | session state: scope + the confirmation gate, shared by both transports |
+| `interfaces/speech.py` | mic capture, `whisper-1`, `tts-1` — the only file that touches audio |
+| `interfaces/voice_chat.py` | push-to-talk loop, `spoken_text`, `speakable`, `normalize_transcript` |
+
+Four decisions logged (D-018 … D-021). Test count 215 → 275.
+
+**The three-agent streaming pipeline was evaluated and rejected** (D-019). Tracing
+the latency showed two of its three stages cannot overlap — SQL generation needs
+the complete question, synthesis needs the rows — so the only real win was
+overlapping TTS with the synthesis stream, worth about a second, and available in
+~10 lines without a broker or three concurrent agents. Redis for a single-user
+terminal app would also have made the confirmation gate racy.
+
+**Two things found by looking rather than by testing.** Spoken aloud, escalation
+reasons read `2026-07-15` as a run of digits and dashes; `speakable()` now
+rewrites dates and house-style asides on output only, leaving the printed form
+correct. And the spoken brief deliberately does *not* offer to read more — an
+offer implies a follow-up turn the transport does not implement, which is the bug
+already fixed once in `resolve_tenant`.
+
+**One documentation bug fixed:** `D-016` was used for two different decisions.
+The later one (two providers, one class) is now `D-017`.
 
 ### What changed since the foundation session
 
@@ -80,28 +109,23 @@ Eighteen questions below. In priority order:
 
 ### Next three tasks
 
-1. **Add the key, then work Q-012 and Q-018 together.** Swap `FakeLLM` for
-   `LLMClient` in `tests/test_sql_questions.py:_agent` and iterate. Expect trouble on
-   Q2 ("last month" as a calendar month, not rolling 30 days) and Q4 (the
-   `status = 'completed'` filter — the difference between 1467.7 and 1564.92, which
-   no error will ever reveal).
-2. **Voice mode (Step 5).** The only remaining assignment deliverable with nothing
-   built. `ResolutionResult.needs_confirmation` and `SqlAnswer.date_anchor` already
-   exist to drive read-back and the "as of 29 May" caveat. Design around the latency
-   budget: two LLM calls per question (D-007), and prompt-caching the schema card
-   (worth 26% of cost and more of the latency) is the cheapest win.
-3. **Q-015 pasted tickets**, which finishes chat mode.
+1. **Put `OPENAI_API_KEY` in `.env` and speak into it (Q-020).** One utterance —
+   "use C F S" — exercises capture, transcription, transcript repair, the
+   resolver and synthesis. This is the largest remaining unknown now that voice
+   is written, and Q-017 is the standing proof that a green fake-driven suite
+   says nothing about how the real API behaves.
+2. **Then run the eight graded questions against the real model (Q-012).** Swap
+   `FakeLLM` for `LLMClient` in `tests/test_sql_questions.py:_agent`. Expect
+   trouble on Q2 ("last month" as a calendar month, not rolling 30 days) and Q4
+   (the `status = 'completed'` filter — the difference between 1467.7 and
+   1564.92, which no error will ever reveal). This is 15% of the grade and it is
+   still unverified.
+3. **Parse a pasted ticket body (Q-015).** The last functional gap against the
+   assignment's stated chat behaviour: `classify()` recognises a pasted ticket,
+   `_triage()` then asks for a ticket number. ~1 hour.
 
-### Try this before the demo
-
-```
-use Fuel       -> refuses, offers three candidates
-use CFS        -> binds to tenant 1
-triage 1083    -> refused: belongs to another customer
-platform       -> then triage 1083 works
-```
-
-Four lines that walk the entire isolation story, and none of them need an API key.
+Q-018 (structured outputs) is best done during task 2, while real responses are
+already on screen.
 
 ---
 
@@ -381,3 +405,43 @@ honest absence.
 **Related:** F2 (`needs_confirmation` unenforced) and F3 (ticket enumeration oracle) from
 the same audit were genuine defects at any threat model and are **fixed** — see the audit
 appendix in SECURITY.md.
+
+---
+
+### Q-020 · Nobody has spoken into voice mode — VERIFICATION GAP
+
+Voice mode is built and everything decidable about it is under test: transcript
+repair (spelled-out short codes, Whisper's trailing punctuation), spoken
+rendering (SQL never spoken, brief cut to level plus two reasons, ISO dates read
+as words), and the confirmation gate inherited from `Conversation`. 28 tests, no
+microphone required.
+
+What is **not** verified, because it needs a key and a person:
+
+1. **The two OpenAI speech calls have never run.** `whisper-1` transcription and
+   `tts-1` synthesis are written against the documented SDK shapes and have never
+   returned a response. Q-017 is the precedent and it is exactly this category —
+   the model ID and `temperature` were both wrong, the whole suite was green, and
+   only a live call would have shown it. Assume the same risk here.
+2. **Microphone capture on this machine.** PortAudio loads and `sounddevice`
+   enumerates two input devices, so the backend works. The capture loop itself —
+   the `InputStream` callback, the Enter-to-stop thread, the WAV assembly — has
+   never recorded real audio. `_to_wav` is verified against synthetic PCM only.
+3. **End-to-end latency.** Every number in D-019's table is an estimate. The
+   decision that table supports — no streaming pipeline — is sound on the
+   structural argument alone (two of three stages cannot overlap), but the size of
+   the remaining win is a guess until measured.
+4. **macOS microphone permission.** Granted to the terminal application, not to
+   Python. First run will prompt, and a denied prompt surfaces as an empty
+   recording rather than an error.
+
+**What to do, in order.** Put `OPENAI_API_KEY` in `.env`, then
+`python -m src.interfaces.voice_chat` and say "use C F S". That one utterance
+exercises capture, transcription, `normalize_transcript`, the resolver, and
+synthesis — every unverified piece except the SQL path. Then ask a data question
+to cover the rest.
+
+**If latency is worse than roughly four seconds**, the fix is already scoped:
+stream the synthesis call and speak sentence by sentence, ~10 lines in
+`voice_chat.main`. Do not reach for the three-agent pipeline; D-019 has the
+argument.

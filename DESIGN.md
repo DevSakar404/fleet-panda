@@ -4,9 +4,9 @@ The walkthrough script. `RECON.md` explains *why* the design is shaped this way;
 `DECISIONS.md` records the contested choices; this file is the map you read while
 tracing a request end to end.
 
-**Status:** everything below is built and tested except the dashed voice transport
-(Step 5). Note that a *pasted* ticket body reaches `triage_agent` only as a ticket
-id today — see OPEN_QUESTIONS.md Q-015.
+**Status:** everything below is built and tested. Note that a *pasted* ticket body
+reaches `triage_agent` only as a ticket id today — see OPEN_QUESTIONS.md Q-015 —
+and that voice has been verified without a microphone in the loop (Q-020).
 
 ---
 
@@ -18,9 +18,13 @@ promise (CLAUDE.md §2).
 
 ```mermaid
 graph TD
-    CHAT[cli_chat.py] --> ROUTE
-    VOICE[voice transport<br/>Step 5] --> ROUTE
+    CHAT[cli_chat.py<br/>renders for the eye] --> CONV
+    VOICE[voice_chat.py<br/>renders for the ear] --> CONV
 
+    CONV[Conversation.handle<br/>scope + confirmation gate] -->|command| CMD[use / platform / scope / quit]
+    CONV -->|question or ticket| ROUTE
+
+    CMD --> RESOLVE
     ROUTE[router.route] --> RESOLVE
 
     RESOLVE[TenantResolver.resolve] -->|ambiguous or unresolved| CLARIFY[clarify:<br/>ranked candidates,<br/>never a guess]
@@ -31,7 +35,7 @@ graph TD
     INTENT -->|ticket_triage| TRIAGE
 
     AUTH{allows_question?} -->|no| REFUSE[refuse:<br/>cross-tenant question<br/>in a scoped session]
-    AUTH -->|yes| SQLA[sql_agent<br/>STUB]
+    AUTH -->|yes| SQLA[sql_agent]
 
     SQLA --> PROMPT[build_sql_prompt<br/>introspected schema card]
     PROMPT --> LLM1[LLMClient.complete]
@@ -47,9 +51,16 @@ graph TD
     SYNTH --> OUT[uniform response:<br/>answer + executed SQL + rows]
     PACK[context pack] --> OUT
 
-    classDef stub stroke-dasharray:5 5
-    class VOICE stub
+    OUT --> RENDER{transport}
+    RENDER -->|chat| EYE[prose + executed SQL<br/>+ the full 25-line brief]
+    RENDER -->|voice| EAR[spoken_text:<br/>prose only, no SQL;<br/>brief cut to level + 2 reasons;<br/>ISO dates spoken as words]
 ```
+
+`Conversation` is the piece that makes the two transports interchangeable. `Router`
+is stateless — one text in, one typed response out. Scope and the pending tenant
+confirmation outlive a turn, so they live in `Conversation`, and both transports
+inherit the confirmation gate rather than reimplementing it (D-018). What the
+transports own is only the two boxes on the right.
 
 The two refusal paths are the interesting part and they refuse for different
 reasons. `CLARIFY` fires when we do not know *who* is being asked about.
@@ -167,10 +178,18 @@ caller — which is the registry earning its place rather than being ceremony.
 | "Why not a vector DB?" | `agent/triage_agent.py` docstring — 12 articles |
 | "Why not LangChain?" | `llm/client.py` — 78 lines, one provider, no indirection |
 
+| "Why isn't voice a streaming pipeline?" | `DECISIONS.md` D-019 — the latency table |
+
 ## 6. What is not designed yet
 
-Voice mode (Step 5) beyond the observation that latency lives on the intent-
-classification path and that `ResolutionResult.needs_confirmation` already exists
-to drive read-back. The response schema is prose-only today — OPEN_QUESTIONS Q-007
-argues it should carry `window_start` / `window_end` / `anchor_mode` once the
-triage brief forces a structured response model into existence.
+Nobody has spoken into voice mode. Transcript repair, spoken rendering and the
+confirmation gate are all under test, but the microphone, the OpenAI speech calls
+and the real end-to-end latency are unverified (Q-020). The latency figures in
+D-019 are estimates, and the decision they support — no streaming pipeline — is
+deliberately revisitable once they are measured.
+
+The response schema is prose-only today — OPEN_QUESTIONS Q-007 argues it should
+carry `window_start` / `window_end` / `anchor_mode` once the triage brief forces a
+structured response model into existence. Voice sharpens that: `speakable()`
+currently rewrites ISO dates out of prose with a regex, which is a symptom of the
+window not being structured data in the first place.

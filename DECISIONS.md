@@ -830,7 +830,7 @@ schedule to whoever is on the phone. Concretely:
 
 ---
 
-### D-016 · Two providers, one class, one branch
+### D-017 · Two providers, one class, one branch
 **Date:** 2026-08-29
 **Context:** The build assumed an Anthropic key; the key actually available is
 OpenAI's. The assignment says "LLM: any provider", so this is a configuration
@@ -854,3 +854,135 @@ correctness control. The cost model above is priced on Claude and would need
 re-running for OpenAI rates. If a third provider ever appears, revisit — at three
 the branch stops being cheaper than the abstraction.
 **Where it lives:** `src/llm/client.py:LLMClient.__init__` and `complete`.
+
+---
+
+### D-018 · Session state extracted to `Conversation` before voice was written
+**Date:** 2026-08-29
+**Context:** Voice mode needed the same session behaviour as chat: current scope,
+`use <company>`, and the pending-confirmation gate that refuses to bind a tenant
+until a human says yes. All of it lived in `cli_chat.main()`'s local variables,
+interleaved with `input()` and `print()`, and none of it was under test.
+**Options considered:**
+- A. Copy the loop into `voice_chat.py` and adapt it. Fastest, and it puts a
+  security control in two places.
+- B. Have voice call `cli_chat` helpers and keep the state in module globals.
+  Shares the code, but makes two concurrent sessions impossible and hides the
+  state in a place neither transport owns.
+- C. Extract a `Conversation` object holding scope and pending confirmation, with
+  one `handle(text) -> RouterResponse` method both transports call.
+**Chosen:** C, and done as its own commit before any voice code existed, so the
+extraction could be proven behaviour-preserving against a green suite rather than
+debugged alongside a new transport.
+The confirmation gate is the reason. It is a security control — an inexactly
+matched company name must not scope the session — and speech-to-text produces
+exactly the near-misses it exists to catch. Two copies of a control is one copy
+that eventually disagrees with the other, and this repo has already shipped that
+bug once (`resolve_tenant` printed "say yes to confirm" while binding on the same
+line; see the CONFIRM path).
+It also drew a boundary worth having in the walkthrough: **`Router` is stateless
+per turn; `Conversation` is the session on top of it; the transports are two
+renderings of the same `RouterResponse`.**
+**Trade-off accepted:** One more file and one more indirection between the CLI and
+the router. `help` stays in the transports — it prints a banner in chat and would
+be a wall of text over voice — so the split is "state here, presentation there",
+which is a line that needs stating rather than one the type system enforces.
+**Where it lives:** `src/agent/conversation.py`, `tests/test_conversation.py`
+(32 tests, including that a pending confirmation outranks every command).
+
+---
+
+### D-019 · Voice is a rendering, not a pipeline: the three-agent design rejected
+**Date:** 2026-08-29
+**Context:** The obvious way to cut voice latency is a concurrent Observer /
+Brain / Generator pipeline — streaming STT, a streaming brain, streaming TTS —
+over `asyncio` queues or Redis Streams. It was specified in some detail before
+being costed.
+**Options considered:**
+- A. Three concurrent agents over Redis Streams, as originally sketched.
+- B. The same three stages over in-process `asyncio.Queue`, no broker.
+- C. A synchronous transport that renders `RouterResponse` for the ear.
+**Chosen:** C, after tracing where the latency actually is. The pipeline is
+hard-serialised and two of its three stages cannot overlap:
+
+| stage | ~cost | can it overlap? |
+|---|---|---|
+| STT (`whisper-1`) | 0.5–1s | — |
+| LLM 1: question → SQL | 1–3s | **no** — needs the complete question |
+| guard + SQLite | ~5ms | irrelevant |
+| LLM 2: rows → prose | 1–1.5s | **no** — needs the rows |
+| TTS (`tts-1`) | 0.5–1s | **yes**, with the tail of LLM 2 |
+
+Streaming STT buys nothing: you cannot generate SQL from *"how many emergency
+orders did tenant 4 have in the past…"*. It also contradicts push-to-talk. The
+Brain has a 5ms database step and nothing to parallelise. Only the Generator wins
+anything real — roughly a second — and that is `async for chunk: speak(chunk)` in
+one process, not three agents and a broker.
+
+Against that ~1s: Redis is a service a grader must install for a single-user
+terminal app; a hand-rolled bus is the control flow CLAUDE.md §3.1 says must stay
+visible; and a continuously-listening pipeline makes the pending-confirmation gate
+(D-018) racy — what happens to the utterance that arrives while a confirmation is
+outstanding? That is a regression on the one control that most distinguishes this
+submission.
+**Trade-off accepted:** Voice is roughly a second slower than it could be, and
+there is no barge-in. Both are deliberate and both are cheap to revisit:
+streaming synthesis into TTS is ~10 lines in `voice_chat.main`, gated on the
+latency actually feeling bad once measured — which it has not been.
+The three-agent design **is** the right answer at a different scale: 150
+concurrent calls, barge-in, sub-second targets, STT/LLM/TTS scaling
+independently. That belongs in the scaling section above, not in a take-home
+demo run from one terminal.
+**Where it lives:** `src/interfaces/voice_chat.py` (~180 lines, synchronous),
+`src/interfaces/speech.py` (audio isolated so the transport stays testable).
+
+---
+
+### D-020 · Push-to-talk rather than silence detection
+**Date:** 2026-08-29
+**Context:** Something has to decide when the speaker has finished.
+**Options considered:**
+- A. Voice activity detection: an RMS threshold over the audio buffer, stop after
+  a silent interval.
+- B. A fixed recording window.
+- C. Push-to-talk: Enter starts, Enter stops.
+**Chosen:** C. A silence threshold has to be tuned to a room, and the room this
+gets demonstrated in is not the room it was tuned in — a pause mid-sentence ends
+the turn early, and background conversation never ends it at all. A fixed window
+truncates a long question and forces a wait after a short one. Enter is
+unambiguous everywhere.
+**Trade-off accepted:** Less natural than "just talk", and it rules out barge-in.
+For a screen-shared demo, predictable beats natural. VAD is ~30 lines on top of
+the existing capture loop if a hands-free mode is ever wanted.
+**Where it lives:** `src/interfaces/speech.py:record_until_enter`.
+
+---
+
+### D-021 · Voice renders our own prose for the ear
+**Date:** 2026-08-29
+**Context:** Speaking a `RouterResponse` verbatim produces two failures. A ticket
+brief is ~25 printed lines — ninety seconds of monologue — and every escalation
+reason carries an ISO date, so `2026-07-15` is read out as a run of digits and
+dashes. Neither showed up in a unit test; both were obvious the moment the output
+was read aloud.
+**Options considered:**
+- A. A third LLM call to write a spoken summary. Best prose, and it adds latency
+  to the one mode where latency is graded, plus a prompt to justify.
+- B. Speak the triage narrative's existing `summary` field. Free, but it was
+  written to be read, has no length ceiling, and need not mention the level.
+- C. Build the spoken brief from the deterministic assessment, and rewrite dates
+  and house-style asides on the way out.
+**Chosen:** C. The escalation level, score and ordered reasons are already
+computed and already ranked, so the spoken brief costs nothing and cannot
+disagree with the printed one. `speakable()` runs on output rather than at the
+source, because ISO dates are correct on screen — only the ear needs the
+translation, so only the ear pays for it.
+The brief ends by pointing at the screen rather than offering to read more. An
+offer implies a follow-up turn this transport does not implement, and shipping a
+sentence that describes a control which does not exist is precisely the bug fixed
+in `resolve_tenant`.
+**Trade-off accepted:** Two escalation reasons are spoken and the rest are only
+printed, so a listener not watching the screen gets a partial picture. That is the
+right trade for audio; the terminal still carries everything.
+**Where it lives:** `src/interfaces/voice_chat.py:spoken_text`, `speakable`,
+`normalize_transcript`; `tests/test_voice.py`.
