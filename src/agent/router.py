@@ -40,6 +40,10 @@ class ResponseKind(str, Enum):
     BRIEF = "brief"
     CLARIFY = "clarify"
     REFUSAL = "refusal"
+    # A tenant was identified, but not exactly enough to bind without a human
+    # saying yes. Distinct from CLARIFY (we do not know who) and from ANSWER (we
+    # are sure). See `resolve_tenant`.
+    CONFIRM = "confirm"
 
 
 @dataclass(frozen=True, slots=True)
@@ -56,6 +60,10 @@ class RouterResponse:
     sql_answer: SqlAnswer | None = None
     brief: TicketBrief | None = None
     candidates: tuple[Candidate, ...] = ()
+    # The tenant this response identified. On CONFIRM it is *pending* -- the
+    # caller must not bind it until a human agrees. Carried here so transports
+    # never re-run the resolver to recover an id they were already told.
+    tenant_id: int | None = None
 
     @property
     def spoken(self) -> str:
@@ -162,10 +170,26 @@ class Router:
         result = self._resolver.resolve(name)
         if result.is_resolved:
             tenant = self._repository.get_tenant(result.tenant_id)
-            confirm = " (say yes to confirm)" if result.needs_confirmation else ""
+
+            # An inexact match returns CONFIRM and does NOT bind. Previously this
+            # printed "(say yes to confirm)" and bound the session on the same
+            # line -- the sentence described a control that did not exist. Over
+            # voice that is the whole risk: speech-to-text produces exactly these
+            # near-misses, and a mangled company name would silently scope the
+            # session to the wrong customer while claiming to have asked.
+            if result.needs_confirmation:
+                return RouterResponse(
+                    ResponseKind.CONFIRM,
+                    f"Did you mean {tenant.name} (tenant {tenant.tenant_id})? "
+                    f"Say yes to continue.",
+                    Intent.CLARIFY,
+                    tenant_id=tenant.tenant_id,
+                )
+
             return RouterResponse(
                 ResponseKind.ANSWER,
-                f"Scoped to {tenant.name} (tenant {tenant.tenant_id}){confirm}.",
+                f"Scoped to {tenant.name} (tenant {tenant.tenant_id}).",
+                tenant_id=tenant.tenant_id,
             )
 
         # Two different failures, and they need different sentences. AMBIGUOUS
@@ -219,21 +243,25 @@ class Router:
                 Intent.TICKET_TRIAGE,
             )
 
-        ticket = self._find_ticket(ticket_id)
-        if ticket is None:
-            return RouterResponse(
-                ResponseKind.CLARIFY, f"I can't find ticket #{ticket_id}.", Intent.TICKET_TRIAGE
-            )
-
         # Tenant isolation for the JSON half: a scoped session may only triage its
         # own tenant's tickets. Without this check a rep scoped to tenant 4 could
         # pull tenant 7's full customer brief by guessing an id.
-        if context.is_bound and ticket.tenant_id != context.tenant_id:
+        #
+        # "Belongs to someone else" and "does not exist" deliberately return the
+        # SAME message. Distinguishing them turned the endpoint into an
+        # enumeration oracle: ticket ids are sequential four-digit integers, so a
+        # scoped user could map every id in use across the platform by sorting
+        # responses into "refused" and "not found". Ticket volume per id range is
+        # competitive intelligence, and it is the usual precursor to a targeted
+        # IDOR. Answering identically costs nothing -- neither reply was
+        # actionable to a legitimate user anyway.
+        ticket = self._find_ticket(ticket_id)
+        invisible = ticket is None or (
+            context.is_bound and ticket.tenant_id != context.tenant_id
+        )
+        if invisible:
             return RouterResponse(
-                ResponseKind.REFUSAL,
-                f"Ticket #{ticket_id} belongs to another customer. This session is "
-                f"scoped to tenant {context.tenant_id}.",
-                Intent.TICKET_TRIAGE,
+                ResponseKind.CLARIFY, f"I can't find ticket #{ticket_id}.", Intent.TICKET_TRIAGE
             )
 
         brief = self._triage_agent.build_brief(ticket)

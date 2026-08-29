@@ -329,3 +329,35 @@ better done while watching real responses.
 **Needs you to:** decide when you add the key. My view: switch to `messages.parse()` with
 the existing `SqlGeneration` model — it deletes `_parse_generation` entirely and turns a
 whole class of refusal into an impossibility. Roughly 30 minutes including test updates.
+
+### Q-019 · No authentication anywhere — BLOCKING for any deployed surface
+**Context:** Found in a security audit of the implementation (2026-08-29), not of the
+README's exercise snippet. There is no authentication or authorization in this codebase.
+A CLI user selects their own tenant with `use <company>` and escalates to cross-tenant
+access by typing `platform`. Session scope is **self-asserted**.
+
+This is structurally identical to README vulnerability V1 (`tenant_id = body.get(...)` —
+caller-supplied), which SECURITY.md correctly condemns. The fixed endpoint in that
+document says *"the tenant comes from the verified session, never from the request
+body"*; the interface actually shipped does the opposite. **The documentation currently
+claims a posture the code does not have**, and that gap is the finding as much as the
+missing auth is.
+
+**Severity:** not remotely exploitable today — there is no network surface, and the
+"attacker" is whoever already owns the process and the SQLite file. It becomes critical
+the moment any of this is exposed: an HTTP endpoint, a shared host, or a voice line.
+
+**Taken:** nothing. Fixing it means introducing an auth boundary, a principal model and a
+session store — a larger piece of work than the CLI it would protect, and one that should
+be designed rather than bolted on overnight.
+
+**Needs you to:** decide the shape before anything ships. My view:
+1. `TenantContext` must only ever be constructed from a verified principal. Make that
+   structural — move `for_tenant()` behind a factory that takes a `Principal`, so
+   "scope this session to tenant 7" is not an expressible operation without one.
+2. `platform` scope requires an explicit internal role, never a runtime command.
+3. Until then, treat the CLI as a local developer tool and say so in the README, rather
+   than letting SECURITY.md imply an auth boundary exists.
+
+Related: F2 (`needs_confirmation` unenforced) and F3 (ticket enumeration oracle) from the
+same audit are **fixed** — see the audit section in SECURITY.md.

@@ -129,6 +129,9 @@ def main() -> None:
     llm = _build_llm()
     router = Router(llm=llm)
     context = TenantContext.platform()
+    # A tenant identified by an inexact match, held until the user says yes.
+    # Nothing binds it; the session stays on its previous scope until confirmed.
+    pending_tenant: int | None = None
 
     print(BANNER)
     while True:
@@ -141,6 +144,20 @@ def main() -> None:
         if not line:
             continue
         lowered = line.lower()
+
+        # A pending confirmation consumes the next line, whatever it is. Anything
+        # other than an explicit yes cancels -- silence or an unrelated answer
+        # must never be read as consent, which over voice is the difference
+        # between scoping to the right customer and the wrong one.
+        if pending_tenant is not None:
+            if lowered in ("yes", "y", "yeah", "yep", "correct", "that's right"):
+                context = TenantContext.for_tenant(pending_tenant)
+                print(f"  {_scope_description(context)}\n")
+            else:
+                print("  Cancelled -- scope unchanged. Try the full company name "
+                      "or its short code.\n")
+            pending_tenant = None
+            continue
 
         if lowered in ("quit", "exit"):
             return
@@ -159,9 +176,14 @@ def main() -> None:
             name = line.split(" ", 2)[-1] if lowered.startswith("use tenant ") else line[4:]
             response = router.resolve_tenant(name.strip())
             print(f"  {response.text}\n")
-            if response.kind is not ResponseKind.CLARIFY:
-                resolved = router._resolver.resolve(name.strip())
-                context = TenantContext.for_tenant(resolved.tenant_id)
+
+            # The response carries the tenant id, so the resolver runs once and
+            # this file never reaches into the router's internals to recover an
+            # id it was already handed.
+            if response.kind is ResponseKind.CONFIRM:
+                pending_tenant = response.tenant_id
+            elif response.kind is ResponseKind.ANSWER and response.tenant_id is not None:
+                context = TenantContext.for_tenant(response.tenant_id)
             continue
 
         print(format_response(router.route(line, context)) + "\n")

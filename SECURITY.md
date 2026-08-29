@@ -373,3 +373,90 @@ safe".
   can disclose information about individual end-customers. Isolation between
   tenants is enforced; privacy *within* a tenant is not addressed at all, and it is
   where the end-customer agent in DECISIONS.md has to start.
+
+
+---
+
+# Appendix — audit of *this* implementation
+
+Everything above reviews the endpoint in the assignment README. This section reviews
+the code in this repository, which is a different question and deserves a separate
+answer. Audited 2026-08-29 with 13 adversarial SQL probes and 3 session-layer probes
+against live code.
+
+## The text-to-SQL path held
+
+Thirteen probes designed to escape the injected tenant predicate. Zero returned a
+foreign `tenant_id`.
+
+| Probe | Result |
+|---|---|
+| Comma join / implicit cross join, 2 and 3 tables | 2 and 3 predicates injected |
+| `UNION ALL` nested inside a subquery (root is `SELECT`, so the root-type check does not fire) | 2 predicates |
+| Scalar subquery in the `SELECT` list | 2 predicates |
+| Correlated subquery; subquery in `HAVING`; `JOIN USING`; `LEFT JOIN` | predicates on both sides |
+| Recursive CTE | contained |
+| CTE shadowing a real table name (`WITH delivery_orders AS ...`) | rejected |
+| Quoted internal table (`"sqlite_master"`) | rejected |
+
+The three README vulnerabilities are not present here. That is the expected result —
+they are what the guard was built against — but it is worth having measured rather
+than assumed.
+
+## Three findings, all outside the SQL path
+
+The isolation failures that did exist were in the identity and session layer, which
+the SQL guard never sees. This is the general lesson: hardening the component under
+review moves the weakness to the component that is not.
+
+### F1 — Session scope is self-asserted (High; open)
+
+No authentication anywhere. `use <company>` and `platform` are unguarded runtime
+commands. Not exploitable today (no network surface), blocking for anything
+deployed. Tracked as OPEN_QUESTIONS **Q-019** with a proposed shape; deliberately
+not fixed overnight because it needs a principal model, not a patch.
+
+### F2 — `needs_confirmation` computed, displayed, never enforced (High; FIXED)
+
+`ResolutionResult.needs_confirmation` was rendered as the text
+`"(say yes to confirm)"` and the CLI bound the session on the same line,
+unconditionally. **The confirmation string described a control that did not exist.**
+
+This was the voice-mode vulnerability in its pre-voice form. Speech-to-text produces
+exactly the inexact matches the flag exists to catch — `"Cascade Fuel Servces"` is
+what STT returns from a slightly-accented "Cascade Fuel Services", and equally what
+it returns from a different company name it mangled. The resolver failed closed
+correctly (D-003); the one signal separating *certain* from *guessed* was then
+discarded by its only consumer. Every subsequent query would be correctly scoped —
+to the wrong tenant.
+
+**Fix:** an inexact match now returns a distinct `ResponseKind.CONFIRM` carrying a
+*pending* tenant id, and binds nothing. The CLI holds it and requires an explicit
+yes; anything else cancels, so silence or an unrelated reply is never read as
+consent. `CONFIRM` is a separate kind rather than a flag on `ANSWER` so that a
+transport cannot treat it as an answer by accident — which is precisely how the bug
+happened. Tests:
+`test_a_fuzzy_match_returns_confirm_and_does_not_bind`,
+`test_an_exact_match_binds_without_a_confirmation_step`.
+
+### F3 — Cross-tenant ticket enumeration oracle (Low–Medium; FIXED)
+
+A tenant-1 session got three distinguishable replies: a brief for its own tickets,
+*"belongs to another customer"* for a real foreign ticket, and *"I can't find it"*
+for a nonexistent one. Ticket ids are sequential four-digit integers, so the
+difference between the last two let a scoped user map every id in use across the
+platform in ~9,000 requests. No content leaked; ticket volume per id range is
+competitive intelligence and the usual precursor to a targeted IDOR.
+
+**Fix:** both cases return the identical message. Neither reply was actionable to a
+legitimate user, so nothing was lost. Tests:
+`test_a_foreign_ticket_is_indistinguishable_from_a_missing_one` and
+`test_the_oracle_stays_closed_across_the_whole_corpus`, which walks all 85 tickets
+from a tenant-1 session and asserts byte-equality with the not-found reply for all
+77 it may not see.
+
+## Not audited
+
+**Voice mode does not exist** — no STT, no TTS, no audio path. No claim about a
+vulnerability *in* the voice agent can be validated. F2 is the closest real thing: a
+defect in the shared core that voice would expose most sharply.
