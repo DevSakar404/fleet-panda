@@ -55,11 +55,12 @@ Rules:
 8. Window boundaries. A SINGLE window -- "the last 7 days", "the past 30 days" --
    is INCLUSIVE of its edge: use `>= date(<anchor>, '-N day')`. Using `>` there
    silently drops a day's rows.
-   Only when comparing TWO ADJACENT windows must they avoid both claiming the same
-   boundary day: there the recent window uses `>` and the prior `> ... AND <=`.
-   Compute a two-window comparison in a CTE and filter in the outer query;
-   repeating the anchor subquery inside one long expression is easy to get wrong.
-   "Declining" means a fall of more than {decline_threshold}%, not any fall at all.
+   Only when comparing TWO ADJACENT windows (e.g. last 30 days vs previous 30 days):
+   compute recent and prior counts with `SUM(CASE WHEN ... THEN 1 ELSE 0 END)` in a CTE
+   where the recent window uses `> date(<anchor>, '-30 day')` and the prior window uses
+   `> date(<anchor>, '-60 day') AND <= date(<anchor>, '-30 day')`.
+   In the outer query, filter for declining volume where percentage change is below
+   -{decline_threshold}%: `100.0 * (recent - prior) / prior < -{decline_threshold}`.
 
 9.  "Last month" is the last COMPLETE CALENDAR month, not a rolling 30 days and
     not the anchor's own month -- the data stops part-way through the anchor month,
