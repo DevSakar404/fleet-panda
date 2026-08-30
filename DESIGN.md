@@ -53,7 +53,7 @@ graph TD
 
     OUT --> RENDER{transport}
     RENDER -->|chat| EYE[prose + executed SQL<br/>+ the full 25-line brief]
-    RENDER -->|voice| EAR[spoken_text:<br/>prose only, no SQL;<br/>brief cut to level + 2 reasons;<br/>ISO dates spoken as words]
+    RENDER -->|voice| EAR[spoken_text:<br/>prose only, no SQL;<br/>brief cut to level + 2 reasons;<br/>ISO dates spoken as words;<br/>streamed sentence by sentence]
 ```
 
 `Conversation` is the piece that makes the two transports interchangeable. `Router`
@@ -179,7 +179,8 @@ caller — which is the registry earning its place rather than being ceremony.
 | "Why not a vector DB?" | `agent/triage_agent.py` docstring — 12 articles |
 | "Why not LangChain?" | `llm/client.py` — 78 lines, one provider, no indirection |
 
-| "Why isn't voice a streaming pipeline?" | `DECISIONS.md` D-019 — the latency table |
+| "Why isn't voice a streaming pipeline?" | `DECISIONS.md` D-019 — the latency table (only TTS overlaps, and it now does: D-026) |
+| "How is voice made faster / more accurate?" | `DECISIONS.md` D-026 — streamed TTS, primed Whisper, offline `say` |
 
 ## 6. What is not designed yet
 
@@ -193,6 +194,11 @@ The response schema is prose-only today — OPEN_QUESTIONS Q-007 argues it shoul
 carry `window_start` / `window_end` / `anchor_mode` once the triage brief forces a
 structured response model into existence. Voice sharpens that: `speakable()`
 currently rewrites ISO dates out of prose with a regex, which is a symptom of the
-window not being structured data in the first place. Streaming sentence-by-sentence
-synthesis (D-019) also remains a scoped latency optimization if multi-sentence
-replies ever require faster time-to-first-audio.
+window not being structured data in the first place.
+
+Sentence-by-sentence TTS streaming — D-019's one pre-approved latency slice — has
+since been built (D-026), so time-to-first-audio on a spoken brief is the first
+sentence rather than the whole answer. What is still deliberately unbuilt is the
+rest of the pipeline D-019 rejected: streaming STT, a streaming brain, and barge-in
+all stay out until there is a concurrency scale that a one-terminal demo does not
+have.

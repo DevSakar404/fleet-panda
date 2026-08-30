@@ -1206,3 +1206,57 @@ reach the agent by a route we have not enumerated. That is the correct trade whi
 network.
 **Where it lives:** `src/data/loaders.py:_reject_duplicates`,
 `src/data/loaders.py:_read_json_array`.
+
+---
+
+### D-026 · Voice latency and recognition pass: take D-019's escape hatch, prime recognition at the source
+**Date:** 2026-08-30
+**Context:** D-019 chose "voice is a rendering, not a pipeline" and left one
+optimization pre-approved but unbuilt: streaming synthesis into TTS, "~10 lines,
+gated on the latency actually feeling bad once measured." On a multi-sentence
+spoken brief the single `tts-1` call is 1.5–2.5s of dead air before any audio,
+which is exactly the case that feels bad in a live demo. Separately, speech-to-text
+mangles our short codes ("CFS" → "C F S", "GLFC" phonetic), and `voice_chat.py`
+was repairing that with regex *after* the fact. And voice refused to start at all
+without `OPENAI_API_KEY`, so the loop could not be demoed offline.
+**Options considered:**
+- A. Leave D-019 as-is; the deferral was deliberate.
+- B. Build the full three-agent streaming pipeline D-019 rejected.
+- C. Take only the pre-approved slice — stream TTS sentence by sentence — and fix
+  recognition at the decoder instead of after it.
+**Chosen:** C, five narrow changes, none of which touches the shared core:
+
+1. **Sentence-streamed TTS.** A bounded producer thread synthesises the next
+   sentence while the current one plays, so time-to-first-audio is the first
+   sentence (~0.4–0.6s), not the whole answer. This is D-019's escape hatch, now
+   that the case it was gated on exists.
+2. **Whisper `initial_prompt`.** The decoder is primed with tenant names, aliases
+   and jargon built from the data files, so "CFS"/"TankLink" come out right at the
+   source rather than being un-mangled by regex downstream. The regex repair stays
+   as a second net.
+3. **Number normalization.** `normalize_transcript` strips grouping commas from
+   ids ("1,083" → "1083", which the ticket parser's `\d+` was splitting) and maps
+   dictated tenant numbers ("tenant three" → "tenant 3"). Both narrow: only
+   digit-adjacent commas, only number words right after "tenant".
+4. **`TTS_SPEED = 1.08`** — ~7% less listening time, imperceptible as "fast".
+5. **Offline macOS `say` fallback.** With no key, or when a synthesis call fails
+   (rate limit, quota), speech degrades to `say`; the loop reads typed input in
+   that mode. There is no offline STT, so this is a demo/dev path, not a second
+   transport.
+
+Still **not** built: streaming STT (contradicts push-to-talk, D-020), a streaming
+brain, barge-in, and any broker. D-019's rejection of the pipeline stands; this
+takes only the one stage that overlaps.
+**Trade-off accepted:** the producer thread is a second point of failure on the
+TTS path — handled by carrying its error back and falling to `say` — and if a
+synthesis call fails *mid-answer* the fallback replays from the top (rare: these
+calls fail on the first sentence). The Whisper prompt can exceed the ~224-token
+window; terms are ordered names → aliases → jargon so the acronyms most likely to
+be misheard survive the truncation. `say`'s WPM is scaled by `TTS_SPEED` rather
+than matched exactly to the OpenAI voice.
+**Extends D-019** (its pre-approved streaming slice) and **D-021** (rendering for
+the ear — this adds *how fast* the ear hears it, not *what* it hears).
+**Where it lives:** `src/interfaces/speech.py` (`_build_speech_prompt`,
+`SpeechClient._speak_streaming`, `_synthesize`, `_say`, offline branch in
+`__init__`), `src/interfaces/voice_chat.py` (`normalize_transcript`, `_listen`),
+`src/config.py` (`TTS_SPEED`, `SAY_BASE_WPM`, `SPEECH_PROMPT_JARGON`).
