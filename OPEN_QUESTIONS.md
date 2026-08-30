@@ -3,7 +3,7 @@
 ## Session summary
 
 **Updated 2026-08-30 (documentation + gap-closing session). Chat and voice both
-work end to end. 301 tests pass.**
+work end to end. 303 tests pass.**
 
 ### This session: an audit against the assignment, and the three gaps it found
 
@@ -503,3 +503,39 @@ and `tts-1` TTS synthesis.
 5. **Confirmation gate:** Destructive/state-switching actions enforce acoustic confirmation.
 
 If latency on long responses ever needs further reduction, sentence-by-sentence synthesis streaming is pre-scoped (D-019).
+
+
+### Q-021 · Corpus integrity is checked by recon, not by code
+**Context:** D-025 hardened `loaders.py` against the two malformed-data cases that
+would fail *silently* — a duplicate tenant name, which would shadow a real customer
+in the resolver index, and a non-object item in a JSON array, which would surface as
+a `TypeError` far from the file that caused it. Five further cases were deliberately
+left unguarded.
+
+**What is still unchecked, and how each would present:**
+
+| Case | Today's behaviour |
+|---|---|
+| Duplicate `ticket_id` / `call_id` / `article_id` | Ticket lookup is a first-match linear scan (`router.py:337`), so the earlier record wins quietly. Nothing is lost, but which one you get is file order. |
+| Missing required key | `KeyError: 'carr'` — loud, but no filename and no record index. |
+| Non-string date, e.g. a Unix timestamp | `AttributeError` inside `_parse_date`. |
+| `null` where a list is expected | `TypeError` from `frozenset(None)`. |
+| Orphaned `tenant_id` (a ticket for a tenant not in customers.json) | No error. The record is simply never returned by `tickets_for`, so it disappears rather than reporting. |
+
+**Already safe, and worth knowing why:** colliding *aliases* are not a defect.
+`resolver._build_index` unions claims into a `set[int]`, so two spellings that
+normalise to the same string produce an ambiguous result and the resolver refuses
+with candidates. Fail-closed was the design (D-003), and it happens to make this
+class of dirt harmless.
+
+**Needs a human decision:** whether corpus integrity belongs in code at all while
+`data/` is a read-only fixture. My position is that it does not, and that the recon
+queries in RECON.md are the check. The trigger to revisit is the source changing:
+the moment tickets or transcripts arrive from an API rather than a file, the orphan
+FK row above becomes a silent data-loss bug rather than a fixture curiosity.
+
+**If it is revisited, the shape is one function, not per-field validation:** a
+`validate_corpus()` that asserts id uniqueness across all five sources and every
+foreign key resolves, called from a test rather than from the load path. That keeps
+the loaders parsers, keeps the checks in one readable place, and costs nothing at
+runtime.

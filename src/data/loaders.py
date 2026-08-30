@@ -46,6 +46,14 @@ def _read_json_array(path: Path) -> list[dict[str, Any]]:
 
     if not isinstance(payload, list):
         raise DataFileError(f"{path.name} must contain a JSON array, got {type(payload).__name__}")
+    for position, item in enumerate(payload):
+        # A stray null or bare string in the array would otherwise surface much
+        # later as `TypeError: 'NoneType' object is not subscriptable` inside a
+        # loader comprehension, with no filename attached.
+        if not isinstance(item, dict):
+            raise DataFileError(
+                f"{path.name} item {position} must be a JSON object, got {type(item).__name__}"
+            )
     return payload
 
 
@@ -62,6 +70,16 @@ def _parse_date(value: str | None) -> date | None:
         return date.fromisoformat(value.split("T", 1)[0])
     except ValueError as exc:
         raise DataFileError(f"Unparseable date value: {value!r}") from exc
+
+
+def _reject_duplicates(rows: tuple[Any, ...], attribute: str, path: Path) -> None:
+    """Fail loudly when a field that downstream code treats as a key repeats."""
+    seen: set[Any] = set()
+    for row in rows:
+        value = getattr(row, attribute)
+        if value in seen:
+            raise DataFileError(f"{path.name} has a duplicate {attribute}: {value!r}")
+        seen.add(value)
 
 
 @dataclass(frozen=True, slots=True)
@@ -159,31 +177,32 @@ class KnowledgeArticle:
 
 @lru_cache(maxsize=1)
 def load_tenants() -> tuple[Tenant, ...]:
-    """Load customers.json. Cached: the file is read-only and read many times."""
-    seen_ids: set[int] = set()
-    tenants: list[Tenant] = []
-    for row in _read_json_array(config.CUSTOMERS_PATH):
-        tenant_id = row["tenant_id"]
-        if tenant_id in seen_ids:
-            raise DataFileError(f"Duplicate tenant_id {tenant_id} in {config.CUSTOMERS_PATH.name}")
-        seen_ids.add(tenant_id)
-        tenants.append(
-            Tenant(
-                tenant_id=tenant_id,
-                name=row["name"],
-                health_score=row["health_score"],
-                carr=row["carr"],
-                # NOTE: the key is `modules_active`, not `active_modules` as CLAUDE.md
-                # section 7 has it. See OPEN_QUESTIONS.md Q-006.
-                modules_active=frozenset(row["modules_active"]),
-                contract_end_date=_parse_date(row.get("contract_end_date")),
-                assigned_csm=row["assigned_csm"],
-                fleet_size=row["fleet_size"],
-                onboarding_status=row["onboarding_status"],
-                region=row["region"],
-            )
+    """Load customers.json. Cached: the file is read-only and read many times.
+
+    Names must be unique, not just ids: `resolver._build_index` keys its canonical
+    lookup by name, so two tenants sharing one name would silently collapse into
+    one entry and make the other tenant unresolvable rather than ambiguous.
+    """
+    tenants = tuple(
+        Tenant(
+            tenant_id=row["tenant_id"],
+            name=row["name"],
+            health_score=row["health_score"],
+            carr=row["carr"],
+            # NOTE: the key is `modules_active`, not `active_modules` as CLAUDE.md
+            # section 7 has it. See OPEN_QUESTIONS.md Q-006.
+            modules_active=frozenset(row["modules_active"]),
+            contract_end_date=_parse_date(row.get("contract_end_date")),
+            assigned_csm=row["assigned_csm"],
+            fleet_size=row["fleet_size"],
+            onboarding_status=row["onboarding_status"],
+            region=row["region"],
         )
-    return tuple(tenants)
+        for row in _read_json_array(config.CUSTOMERS_PATH)
+    )
+    _reject_duplicates(tenants, "tenant_id", config.CUSTOMERS_PATH)
+    _reject_duplicates(tenants, "name", config.CUSTOMERS_PATH)
+    return tenants
 
 
 @lru_cache(maxsize=1)

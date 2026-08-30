@@ -71,7 +71,7 @@ def test_load_tenants_raises_on_duplicate(monkeypatch: pytest.MonkeyPatch, tmp_p
     monkeypatch.setattr("src.config.CUSTOMERS_PATH", file_path)
     load_tenants.cache_clear()
 
-    with pytest.raises(DataFileError, match="Duplicate tenant_id 1"):
+    with pytest.raises(DataFileError, match="duplicate tenant_id: 1"):
         load_tenants()
 
 

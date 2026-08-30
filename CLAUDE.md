@@ -195,7 +195,7 @@ updated every session.
 | Transport | `interfaces/{cli_chat,voice_chat}.py`, `interfaces/speech.py` | Chat runs without an API key — triage, scoping and every refusal path are deterministic. Voice is push-to-talk (`whisper-1` in, `tts-1` out) over the shared `Conversation` core (D-018). |
 | Docs | `RECON.md`, `DESIGN.md`, `DECISIONS.md`, `SECURITY.md`, `OPEN_QUESTIONS.md` | Every assignment deliverable is written, voice included. |
 
-**No stubs remain. 301 tests pass.** The eight graded questions are asserted twice:
+**No stubs remain. 303 tests pass.** The eight graded questions are asserted twice:
 against hand-written reference SQL, and end to end through the agent.
 
 ### Not built

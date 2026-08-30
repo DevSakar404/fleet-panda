@@ -1169,3 +1169,40 @@ than the platform answer, and neither is wrong -- they answer slightly different
 questions. The system does not currently say which one it used.
 **Where it lives:** `src/db/guard.py:_inject_tenant_predicates` (the behaviour),
 `src/db/schema.py:SchemaCard.render` (the pinned anchor column).
+
+---
+
+### D-025 · Loader validates two keys, not the whole corpus
+**Date:** 2026-08-29
+**Context:** A review of `loaders.py` raised seven possible malformed-data failures
+(duplicate names, missing keys, non-object array items, non-string dates, alias
+whitespace collisions, null list fields, orphaned foreign keys). Checking the real
+files showed all seven pass today: 12 tenants with unique ids and names, aliases
+unique after strip and lowercase, zero orphan `tenant_id` in tickets. The files are
+read-only fixtures verified in Step 0 recon, so the question was which checks earn
+their lines when the data is already known-good.
+**Options considered:**
+- A. Validate every field on every record -- the loaders become a schema layer, which
+  is what Pydantic is for, and the module docstring already argues against it for
+  trusted local fixtures.
+- B. Add nothing; the recon queries are the check.
+- C. Guard only the fields that would fail *silently*, and let the rest crash.
+**Chosen:** C. The discriminator is not "could this break" but "would I see it
+break". A missing `carr` raises `KeyError: 'carr'` -- ugly, but it stops the process
+and names the field. A duplicate tenant *name* does not: `resolver._build_index`
+keys its canonical lookup by name, so the second tenant overwrites the first and one
+real customer becomes silently unresolvable. Unresolvable is worse than ambiguous,
+because the ambiguity path at least refuses and asks. That one earns a check. A
+non-dict array item earns one too, because it surfaces as a `TypeError` inside a
+comprehension with no filename attached, three modules from the actual fault.
+**Not added, deliberately:** duplicate `ticket_id`/`call_id`/`article_id`, missing
+keys, type mismatches, and orphaned foreign keys -- see Q-021.
+**Extends D-016** (duplicate-key detection in the loaders): D-016 rejects a key
+repeated *within* one JSON object; this rejects a `tenant_id` or `name` repeated
+*across* rows, plus a non-object array item. Same boundary, adjacent failures.
+**Trade-off accepted:** the loader is not a validator, and a corrupt file can still
+reach the agent by a route we have not enumerated. That is the correct trade while
+`data/` is a fixture; it stops being correct the day these records arrive over a
+network.
+**Where it lives:** `src/data/loaders.py:_reject_duplicates`,
+`src/data/loaders.py:_read_json_array`.

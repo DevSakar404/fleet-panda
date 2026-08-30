@@ -15,7 +15,7 @@ isolation, routing, and escalation is made once, below the transport boundary.
 | | |
 |---|---|
 | Build | Chat and voice both work end to end. No stubs remain. |
-| Tests | **301 pass, no skips.** No test needs an API key, a microphone, or a network connection. |
+| Tests | **303 pass, no skips.** No test needs an API key, a microphone, or a network connection. |
 | Live model | Run against a real model: **isolation 7/7**, data correctness **7-8/8** (D-023, D-024). Measured on `gpt-4o-mini`. |
 | Known gaps | Q8 varies run to run. Voice is verified without a microphone in the loop (Q-020). |
 

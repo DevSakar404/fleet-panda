@@ -12,9 +12,19 @@ The tests are grouped by what they protect:
 
 from __future__ import annotations
 
+from dataclasses import replace
+from pathlib import Path
+
 import pytest
 
-from src.data.loaders import load_call_transcripts, load_tickets
+from src.data.loaders import (
+    DataFileError,
+    _read_json_array,
+    _reject_duplicates,
+    load_call_transcripts,
+    load_tenants,
+    load_tickets,
+)
 from src.data.resolver import MatchMethod, TenantResolver, normalize
 
 
@@ -163,3 +173,31 @@ def test_normalize_keeps_words_that_only_look_like_suffixes():
     """
     assert normalize("Atlantic Coast Energy") == "atlantic coast energy"
     assert "coast" in normalize("Atlantic Coast Energy")
+
+
+# --- loader guards that protect the index ------------------------------------
+
+def test_duplicate_tenant_name_is_rejected_at_load():
+    """Two tenants sharing a name would collapse silently in `_build_index`.
+
+    `canonical = {t.name: t.tenant_id for t in tenants}` keeps the last writer, so
+    the shadowed tenant becomes unresolvable -- and unresolvable is worse than
+    ambiguous, because nothing refuses and nothing asks. Caught at load instead.
+    """
+    tenants = load_tenants()
+    duplicated = tenants + (replace(tenants[0], tenant_id=999),)
+
+    with pytest.raises(DataFileError, match="duplicate name"):
+        _reject_duplicates(duplicated, "name", Path("customers.json"))
+
+    with pytest.raises(DataFileError, match="duplicate tenant_id"):
+        _reject_duplicates(tenants + (tenants[0],), "tenant_id", Path("customers.json"))
+
+
+def test_non_object_item_in_json_array_is_rejected(tmp_path):
+    """A stray null in the array must name the file, not blow up in a loader."""
+    path = tmp_path / "customers.json"
+    path.write_text('[{"tenant_id": 1}, null]', encoding="utf-8")
+
+    with pytest.raises(DataFileError, match="item 1 must be a JSON object, got NoneType"):
+        _read_json_array(path)
