@@ -1031,3 +1031,55 @@ customer, sending the reader to fix the wrong thing. Shape is now decided first:
 "this is not a ticket" and "this is a ticket, but whose?" are different failures
 and get different sentences — the same distinction `RouterResponse` already draws
 between `CLARIFY` and `REFUSAL`.
+
+### D-023 · The prompt was hardened against a live model, and the tuning has a ceiling
+**Date:** 2026-08-30
+**Context:** Q-012 finally ran: the eight graded questions against a real model
+(`gpt-4o-mini`, the OpenAI branch) instead of `FakeLLM`. The first run scored
+**2 of 8** on data correctness, while all seven isolation assertions passed. The
+fake-driven suite had been green throughout, which is exactly what Q-012 predicted
+and what Q-017 had already proved once.
+**What the failures actually were:** almost none of them were the model being
+incapable. Two were facts absent from the schema card — it summed
+`shifts.total_deliveries` (which does not reconcile with `delivery_orders`: 40,911
+against 6,851, ~6x) and filtered `delivery_date` where "emergency **orders**"
+means `order_date`. Three were ambiguous English the prompt never resolved: "last
+month" (calendar vs rolling), "by tenant" (it grouped by `customer_id` too, 114
+rows), "delivery volume" (gallons vs count). Two were our *tests* encoding one
+reading of an ambiguous question — the model listed the six trucks where the
+reference counted them, and returned twelve fill rates unordered where the
+reference sorted them. Both of those readings are defensible, arguably better.
+**Options considered:**
+A — tune the prompt until all eight pass.
+B — add the missing facts and the house conventions, relax the two tests that were
+pinning presentation rather than answers, and stop.
+C — route the known questions to fixed SQL, as `operational_snapshot` already does
+(D-014).
+**Chosen:** B, and the reason is a measurement rather than a preference. Pursuing A
+produced a **regression**: a fifteen-line CTE template written into the prompt for
+Q8 took the run from 10/15 to 5/15 by crowding the rest, and Q1 — which had passed
+in every run — started failing at 508 against 604. Trimming that rule back to prose
+restored 13/15. A second instance of the same lesson: telling the model that
+adjacent windows use `>` bled into single windows, and Q5 returned 15, which is the
+exact signature this repo already documents for that mistake in
+`triage_agent.operational_snapshot`. The prompt is a shared resource; a rule added
+for one question is paid for by the other seven.
+**Where it lives:** `src/db/schema.py:SchemaCard.render` (three facts added),
+`src/llm/prompts.py` (rules 8-11, and `build_sql_prompt` now interpolates
+`config.DECLINE_THRESHOLD_PCT` so the threshold is not restated),
+`tests/test_sql_questions.py` (Q6, Q7 and Q8 assert the answer, not one SQL
+shape's column layout).
+**Trade-off accepted:** the run now scores **6-8 of 8** rather than a fixed number.
+Q5 and Q8 are not stable — they are the two questions with the most undetermined
+degrees of freedom, and Q8 alone has four (measure, window definition, boundary
+convention, materiality cut). A demo may show a different score than the last run
+did, and that is worth saying out loud rather than being discovered. Option C
+remains open and is precedented: `operational_snapshot` already answers four known
+questions with fixed SQL for exactly this reason.
+**Also fixed, and only findable this way:** a guard-approved query that SQLite
+refuses — the model wrote `d.tenant_id` against an unbound alias — raised
+`sqlite3.OperationalError` straight out of `SqlAgent.answer`, which documents
+itself as never raising for bad SQL. A stack trace reached the caller. Execution
+failures are now `QueryExecutionError`, fed back into the existing retry as the
+correction (SQLite's own message is a better one than any we could infer) and
+becoming a refusal if the retry also fails. `tests/test_sql_agent.py` pins both.

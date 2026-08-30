@@ -23,6 +23,7 @@ import os
 
 import pytest
 
+from src import config
 from src.agent.session import TenantContext
 from tests.conftest import FakeLLM, sql_reply
 
@@ -239,7 +240,9 @@ REFERENCE_SQL = {
        f"              AND delivery_date <= date({ANCHOR}, '-30 day') THEN 1 ELSE 0 END) AS prior"
        f"  FROM delivery_orders WHERE status = 'completed' GROUP BY tenant_id)"
        f" SELECT tenant_id, recent, prior, 100.0 * (recent - prior) / prior AS pct_change"
-       f" FROM windows WHERE prior > 0 ORDER BY pct_change",
+       f" FROM windows WHERE prior > 0"
+       f" AND 100.0 * (recent - prior) / prior < {config.DECLINE_THRESHOLD_PCT}"
+       f" ORDER BY pct_change",
 }
 
 QUESTIONS = {
@@ -291,8 +294,6 @@ def _agent(number: int, answer_text: str = "Answer."):
         (3, ("Daryl Williams", 91)),
         (4, (1467.7,)),
         (5, (17,)),
-        (6, (6,)),
-        (7, (3, 0.9268)),
     ],
     ids=lambda v: f"q{v}" if isinstance(v, int) else "",
 )
@@ -327,14 +328,48 @@ def test_agent_answers_the_question(number, first_row):
     assert answer.date_anchor == "2026-05-29"
 
 
-def test_agent_answers_q8_with_a_materiality_threshold():
-    """Q8 separately: the assertion is the filtered list, not the first row."""
-    from src import config
+# Q6, Q7 and Q8 are asserted on their own because the correct answer is not a
+# fixed first row, and pinning one was pinning our reference SQL's presentation
+# rather than the answer. The first live run made that concrete: the model listed
+# the six trucks where the reference counted them, and returned the twelve fill
+# rates unordered where the reference sorted them. Both are defensible readings of
+# the question -- arguably better ones -- so the assertions now describe what a
+# correct answer contains and stay quiet about how it is shaped.
 
+
+def test_agent_answers_q6_with_the_six_trucks_in_maintenance():
+    """Q6. "Which trucks" admits a list or a count; six is six either way."""
+    answer = _agent(6).answer(QUESTIONS[6], TenantContext.platform())
+    assert not answer.refused, answer.refusal_reasons
+
+    if answer.row_count == 1 and len(answer.rows[0]) == 1:
+        assert answer.rows[0][0] == 6          # counted
+    else:
+        assert answer.row_count == 6           # listed
+
+
+def test_agent_answers_q7_with_every_tenants_fill_rate():
+    """Q7. The question asks for a fill rate per tenant and does not ask for a
+    ranking, so ordering is not part of being right. Tenant 3 is still the
+    highest, whoever happens to be printed first."""
+    answer = _agent(7).answer(QUESTIONS[7], TenantContext.platform())
+    assert not answer.refused, answer.refusal_reasons
+    assert answer.row_count == 12
+
+    rates = {row[0]: row[1] for row in answer.rows}
+    assert all(0.90 < rate < 0.95 for rate in rates.values())
+    best = max(rates, key=rates.get)
+    assert best == 3
+    assert rates[best] == pytest.approx(0.9268, rel=1e-4)
+
+
+def test_agent_answers_q8_with_a_materiality_threshold():
+    """Q8. The answer is which tenants are declining, not the column layout that
+    carries them. The threshold reaches the model through the prompt (D-023);
+    before it did, every tenant with any decline came back -- eleven of twelve."""
     answer = _agent(8).answer(QUESTIONS[8], TenantContext.platform())
-    assert not answer.refused
-    material = [row[0] for row in answer.rows if row[3] < config.DECLINE_THRESHOLD_PCT]
-    assert material == [4, 8, 9, 12]
+    assert not answer.refused, answer.refusal_reasons
+    assert {row[0] for row in answer.rows} == {4, 8, 9, 12}
 
 
 @pytest.mark.parametrize("number", sorted(CROSS_TENANT))

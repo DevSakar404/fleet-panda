@@ -3,7 +3,7 @@
 ## Session summary
 
 **Updated 2026-08-30 (documentation + gap-closing session). Chat and voice both
-work end to end. 299 tests pass.**
+work end to end. 301 tests pass.**
 
 ### This session: an audit against the assignment, and the three gaps it found
 
@@ -126,9 +126,10 @@ D-012 because it is the argument for the working value.
 
 Eighteen questions below. In priority order:
 
-- **Q-012 — the agent has never spoken to a real model.** Still the biggest unknown.
-  Q-017 is proof of the category: nothing in a fake-LLM suite can catch how the real
-  API is called. Assume there are more once the key is in.
+- **Q-012 — ANSWERED 2026-08-30.** Isolation scored 7/7 against a real model;
+  data correctness went 2/8 -> 6-8/8 after D-023. Q5 and Q8 remain run-to-run
+  unstable. Re-run with an **Anthropic** key before submitting — this was measured
+  on `gpt-4o-mini`.
 - **Q-018 — structured outputs** would delete the fence-stripping JSON parser
   entirely and turn a class of refusal into an impossibility. ~30 minutes, best done
   while watching real responses.
@@ -280,7 +281,40 @@ Flagging separately that I should have logged this as a question during the foun
 session rather than silently deciding not to write it — the charter's rule is to log
 conflicts, and "the layout omits something useful" is a conflict.
 
-### Q-012 · The agent has never spoken to a real model
+### Q-012 · The agent has never spoken to a real model — ANSWERED 2026-08-30
+**Run it yourself:** `FLEETPANDA_EVAL_LLM=1 pytest tests/test_sql_questions.py -v`
+
+**Result on `gpt-4o-mini` (the OpenAI branch — no Anthropic key was present):**
+
+| | First run | After D-023 |
+|---|---|---|
+| Isolation (4 cross-tenant refusals + 3 scoped allowances) | **7 / 7** | **7 / 7** |
+| Data correctness | 2 / 8 | **6-8 / 8, varies by run** |
+
+Isolation never wavered, in any run. Data correctness was the problem, and D-023
+records what the failures actually were — mostly missing schema facts and ambiguous
+English, not model incapability. Two of the eight "failures" were our own tests
+pinning the reference SQL's presentation rather than the answer.
+
+**Three things worth knowing before a demo:**
+1. **Q5 and Q8 are not stable.** They have the most undetermined degrees of freedom
+   (Q8 alone has four). A live demo may score differently than your last run. Say so
+   before an interviewer finds it.
+2. **This was `gpt-4o-mini`.** `config.ANTHROPIC_MODEL` is `claude-opus-5` and the
+   client prefers Anthropic when both keys are set, so a grader with an Anthropic key
+   is running a materially different and probably better system than this measurement.
+   Worth re-running with an Anthropic key before submitting.
+3. **Prompt tuning has a measured ceiling** — see D-023. Over-fitting one question
+   regressed the others twice, both times reproducibly.
+
+**Still open:** whether to route the eight known questions to fixed SQL the way
+`operational_snapshot` already does (D-014). That would make correctness
+deterministic and is precedented, but it answers a different question than
+"text-to-SQL works". My view: leave it, and be honest about the variance.
+
+---
+
+### Q-012 (original entry) · The agent has never spoken to a real model
 **Context:** No `ANTHROPIC_API_KEY` is present in this environment, and CLAUDE.md 7
 forbade live calls during the foundation session. Every agent test is driven by
 `tests/conftest.py:FakeLLM`, primed with the reference SQL.

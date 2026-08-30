@@ -15,8 +15,9 @@ isolation, routing, and escalation is made once, below the transport boundary.
 | | |
 |---|---|
 | Build | Chat and voice both work end to end. No stubs remain. |
-| Tests | **299 pass, no skips.** No test needs an API key, a microphone, or a network connection. |
-| Known gaps | The agent has not yet been run against a live model (Q-012). Voice is verified without a microphone in the loop (Q-020). |
+| Tests | **301 pass, no skips.** No test needs an API key, a microphone, or a network connection. |
+| Live model | Run against a real model: **isolation 7/7**, data correctness **6-8/8** depending on the run (D-023). Measured on `gpt-4o-mini`. |
+| Known gaps | Q5 and Q8 vary run to run. Voice is verified without a microphone in the loop (Q-020). |
 
 The system has **no HTTP API**. It ships as two terminal transports. Where this
 document refers to "the endpoint" or "deploying as a service", that is a
@@ -114,6 +115,12 @@ the score (~2 API calls per question):
 FLEETPANDA_EVAL_LLM=1 .venv/bin/python -m pytest tests/test_sql_questions.py -v
 ```
 
+Measured on `gpt-4o-mini`: **isolation 7/7** (four cross-tenant refusals, three
+scoped allowances) and **data correctness 6-8 of 8**, varying by run — Q5 and Q8
+are the two with enough undetermined degrees of freedom to move between runs. See
+[D-023](DECISIONS.md) for what the failures were and why prompt tuning has a
+ceiling.
+
 ---
 
 ## Documentation
@@ -133,7 +140,7 @@ This documentation is modular (hub-and-spoke, following the
 
 | Document | What it is |
 |---|---|
-| [DECISIONS.md](DECISIONS.md) | The dated engineering journal (D-001 … D-022), plus the cost model, the 150-tenant scaling answer, and the end-customer-agent answer. `docs/architecture_decisions.md` is the narrative digest of this file. |
+| [DECISIONS.md](DECISIONS.md) | The dated engineering journal (D-001 … D-023), plus the cost model, the 150-tenant scaling answer, and the end-customer-agent answer. `docs/architecture_decisions.md` is the narrative digest of this file. |
 | [SECURITY.md](SECURITY.md) | Code-review challenge: three vulnerabilities in a sample text-to-SQL endpoint, each with an attack scenario and the implemented fix. |
 | [RECON.md](RECON.md) | Step 0 data exploration. Explains most of the design. |
 | [DESIGN.md](DESIGN.md) | Request-flow diagrams and module boundaries. |
@@ -169,7 +176,7 @@ src/
   agent/               session (TenantContext), router, conversation, sql_agent,
                        triage_agent, ticket_parser, escalation (pure, no LLM)
   interfaces/          cli_chat, voice_chat, speech (the only file touching audio)
-tests/                 299 tests; entity resolution, tenant isolation, the 8
+tests/                 301 tests; entity resolution, tenant isolation, the 8
                        questions, security fixes, escalation, triage, ticket
                        parsing, voice
 ```

@@ -15,6 +15,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from src import config
 from src.db.schema import introspect
 
 if TYPE_CHECKING:  # import cycle: the agent imports prompts, not the other way round
@@ -51,6 +52,26 @@ Rules:
 6. Give every computed column an explicit alias.
 7. Put anything you had to assume in `assumptions` -- especially which date
    column you chose, and how you interpreted a relative window.
+8. Window boundaries. A SINGLE window -- "the last 7 days", "the past 30 days" --
+   is INCLUSIVE of its edge: use `>= date(<anchor>, '-N day')`. Using `>` there
+   silently drops a day's rows.
+   Only when comparing TWO ADJACENT windows must they avoid both claiming the same
+   boundary day: there the recent window uses `>` and the prior `> ... AND <=`.
+   Compute a two-window comparison in a CTE and filter in the outer query;
+   repeating the anchor subquery inside one long expression is easy to get wrong.
+   "Declining" means a fall of more than {decline_threshold}%, not any fall at all.
+
+9.  "Last month" is the last COMPLETE CALENDAR month, not a rolling 30 days and
+    not the anchor's own month -- the data stops part-way through the anchor month,
+    so that one is partial and would undercount. It is the month BEFORE the anchor's
+    month. Select it as:
+      `strftime('%Y-%m', delivery_date) =
+       strftime('%Y-%m', date(<anchor>, 'start of month', '-1 month'))`
+10. "By tenant" means ONE ROW PER TENANT: `GROUP BY tenant_id` and nothing else.
+    Adding `customer_id` to the grouping answers a different question -- there are
+    114 end-customers and 12 tenants.
+11. "Delivery volume" is the COUNT of completed deliveries, not a sum of gallons.
+    Say which you used in `assumptions`.
 """
 
 
@@ -176,5 +197,15 @@ def build_triage_payload(context: "TicketContext", assessment: "EscalationAssess
 
 
 def build_sql_prompt() -> str:
-    """The text-to-SQL system prompt with the live schema card interpolated."""
-    return SQL_SYSTEM_PROMPT.format(schema_card=introspect().render())
+    """The text-to-SQL system prompt with the live schema card interpolated.
+
+    The decline threshold is interpolated rather than written into the prompt
+    text, so `config.DECLINE_THRESHOLD_PCT` stays the single place it is defined
+    (CLAUDE.md 5). It reached the prompt only after the first live run: the value
+    existed in config and in the tests, but nothing ever told the model about it,
+    so it flagged every tenant with any decline at all -- eleven of twelve.
+    """
+    return SQL_SYSTEM_PROMPT.format(
+        schema_card=introspect().render(),
+        decline_threshold=abs(config.DECLINE_THRESHOLD_PCT),
+    )

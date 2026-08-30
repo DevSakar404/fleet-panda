@@ -218,3 +218,44 @@ def test_no_key_at_all_raises_naming_both_options(monkeypatch):
 
     with pytest.raises(LLMConfigurationError, match="ANTHROPIC_API_KEY or OPENAI_API_KEY"):
         LLMClient()
+
+
+# --- SQL that the guard allows and SQLite still rejects ------------------------
+#
+# Found by the first live run, not by this suite: the model wrote `d.tenant_id`
+# against an alias with no such column. The guard approved it -- it validates
+# statement shape and table access, not column names -- and the resulting
+# sqlite3.OperationalError propagated straight out of `answer()`, which documents
+# itself as never raising for bad SQL. A stack trace reached the caller.
+
+# Reproduces the shape the live model produced: an alias `d` that is never bound,
+# so `d.tenant_id` resolves to nothing. The guard allows it -- `delivery_orders`
+# and `drivers` are both allowlisted and it is a single SELECT.
+BAD_COLUMN_SQL = "SELECT d.tenant_id FROM delivery_orders o JOIN drivers d2 ON 1=1"
+
+
+def test_an_unrunnable_query_is_retried_rather_than_raised():
+    """The DB's own error is the correction handed back to the model."""
+    llm = FakeLLM(
+        sql_reply(BAD_COLUMN_SQL),
+        sql_reply("SELECT COUNT(*) AS n FROM delivery_orders"),
+        "There are 9769 orders.",
+    )
+    answer = SqlAgent(llm).answer("how many orders?", TenantContext.platform())
+
+    assert not answer.refused, answer.refusal_reasons
+    assert answer.attempts == 2
+    # The retry prompt carried SQLite's message, not a generic failure.
+    retry_prompt = llm.calls[1]["user"]
+    assert "no such column" in retry_prompt
+    assert "d.tenant_id" in retry_prompt
+
+
+def test_a_query_that_never_runs_becomes_a_refusal_not_a_crash():
+    """Both attempts unrunnable: the caller gets a refusal, never an exception."""
+    llm = FakeLLM(sql_reply(BAD_COLUMN_SQL), sql_reply(BAD_COLUMN_SQL))
+    answer = SqlAgent(llm).answer("how many orders?", TenantContext.platform())
+
+    assert answer.refused
+    assert answer.rows == ()
+    assert any("no such column" in reason for reason in answer.refusal_reasons)

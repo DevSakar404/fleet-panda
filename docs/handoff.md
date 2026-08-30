@@ -10,7 +10,7 @@ summary: what is done, what is not, and what will bite the next person.
 
 ## Status
 
-Chat and voice both work end to end. **299 tests pass, no skips.** No test
+Chat and voice both work end to end. **301 tests pass, no skips.** No test
 requires an API key, a microphone, or a network connection — every agent test
 drives `tests/conftest.py:FakeLLM`. The build history is a sequence of small
 commits, one step per commit (recon → data → database → agent → transports).
@@ -43,7 +43,7 @@ and end to end through the agent.
 
 | Ref | Item | Estimate |
 |---|---|---|
-| **Q-012** | **The agent has never called a real model.** Every test drives `FakeLLM`. Q-017 is the standing proof this matters: `config` once held a dead model id and a `temperature` param current models reject with a 400, and the whole suite stayed green. Assume more of the same once a key is in. | — |
+| **Q-012** | **Answered 2026-08-30.** Against a live model: isolation **7/7**, data correctness **6-8/8** (was 2/8 before D-023). **Q5 and Q8 vary run to run.** Measured on `gpt-4o-mini` — re-run with an Anthropic key, which is what `config` defaults to. | — |
 | **Q-020** | **Voice has never had a microphone in the loop.** Transcript repair, spoken rendering, and the confirmation gate are all under test; capture, the OpenAI speech calls, and real end-to-end latency are not. The latency figures in D-019 are estimates. | — |
 | Q-018 | Provider-native **structured outputs** would delete the fence-stripping JSON parser and turn a class of refusal into an impossibility. Best done while watching real responses (during Q-012). | ~30 min |
 | Q-002 | The `product_area → module` map (`billing→invoicing`, `reporting→analytics`) is inferred, not documented. Under-flags by design. Needs FleetPanda domain confirmation. | edit |
@@ -94,18 +94,16 @@ The next three tasks, from [`OPEN_QUESTIONS.md`](../OPEN_QUESTIONS.md):
 1. **Put `OPENAI_API_KEY` in `.env` and speak into it (Q-020).** One utterance —
    "use C F S" — exercises capture, transcription, transcript repair, the
    resolver, and synthesis.
-2. **Run the eight graded questions against the real model (Q-012).**
+2. **Re-run the graded questions with an ANTHROPIC key (Q-012, D-023).**
 
    ```bash
    FLEETPANDA_EVAL_LLM=1 .venv/bin/python -m pytest tests/test_sql_questions.py -v
    ```
 
-   `_agent` switches to `LLMClient` on that variable and primes nothing, so the
-   model writes the SQL itself while every assertion stays as it is. One PASS/FAIL
-   line per question is the score. Expect trouble on Q2 ("last month" as a
-   calendar month vs rolling 30 days) and Q4 (the `status = 'completed'` filter —
-   1467.7 vs 1564.92, which no error will ever reveal). This is 15% of the grade
-   and still unverified.
+   Already run on `gpt-4o-mini`: isolation 7/7, data correctness 6-8/8 depending
+   on the run. But `config` defaults to `claude-opus-5` and the client prefers
+   Anthropic when both keys are present, so a grader is running a different system
+   than that measurement. Q5 and Q8 are the unstable two.
 3. **Adopt provider-native structured outputs (Q-018).** Deletes the
    fence-stripping JSON parser in `sql_agent._parse_generation` and turns a class
    of refusal into an impossibility. Best done during task 2, while real responses

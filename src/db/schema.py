@@ -90,6 +90,30 @@ class SchemaCard:
             "'completed'. Any fill-rate or gallons aggregate must filter "
             "`status = 'completed'` or the numerator silently loses 30% of rows "
             "while the denominator keeps them.",
+            # Added after the first live run: the model answered Q5 with
+            # delivery_date and got 18 where the correct answer is 17. Both
+            # columns are always populated, so nothing in the data hints at which
+            # one a question means -- only the wording does.
+            "- `order_date` is when an order was PLACED; `delivery_date` is when "
+            "it was fulfilled, 0-3 days later (1.5 on average). Both are always "
+            "populated, including for cancelled and pending orders, so picking "
+            "the wrong one shifts a relative window by a day or two and returns a "
+            "plausible wrong number with no error. A question about ORDERS "
+            "('how many emergency orders...') filters `order_date`. A question "
+            "about DELIVERIES ('deliveries completed...') filters "
+            "`delivery_date`.",
+            # Added after the first live run: the model answered Q3 by summing
+            # this column, which ranks drivers correctly but reports six times the
+            # real delivery count.
+            "- `shifts.total_deliveries` is a per-shift counter that does NOT "
+            "reconcile with `delivery_orders`: it sums to 40,911 platform-wide "
+            "against 6,851 completed orders, roughly 6x. Never use it to count "
+            "deliveries. To rank drivers, COUNT rows in `delivery_orders` grouped "
+            "by `driver_id`.",
+            "- A question naming people or vehicles wants their labels, not their "
+            "keys. Join `drivers` for `drivers.name` and `trucks` for "
+            "`trucks.label` rather than returning a bare `driver_id` or "
+            "`truck_id`.",
         ])
 
         if self.date_anchor:

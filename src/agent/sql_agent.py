@@ -29,7 +29,7 @@ from sqlglot import exp
 
 from src import config
 from src.agent.session import TenantContext
-from src.db.executor import QueryExecutor, QueryResult
+from src.db.executor import QueryExecutionError, QueryExecutor, QueryResult
 from src.db.guard import GuardResult
 from src.db.schema import introspect
 from src.llm import prompts
@@ -118,7 +118,18 @@ class SqlAgent:
             if refusal:
                 return self._refusal(question, refusal, attempt, generation.assumptions)
 
-            verdict, result = self._executor.run(generation.sql, context)
+            try:
+                verdict, result = self._executor.run(generation.sql, context)
+            except QueryExecutionError as exc:
+                # The guard passed it and SQLite would not run it -- almost always
+                # a column that does not exist. SQLite's own message is the most
+                # useful correction we have, so it is fed back verbatim the same
+                # way a guard reason would be, and the attempted SQL goes with it.
+                rejection = GuardResult(
+                    allowed=False, rewritten_sql=generation.sql, reasons=(str(exc),)
+                )
+                continue
+
             if verdict.allowed and result is not None:
                 return self._synthesise(question, generation, verdict, result, attempt)
 

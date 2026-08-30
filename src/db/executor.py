@@ -41,6 +41,22 @@ class QueryRejectedError(RuntimeError):
     """Execution was attempted on SQL the guard did not approve."""
 
 
+class QueryExecutionError(RuntimeError):
+    """The guard approved the SQL and SQLite still could not run it.
+
+    A generated query can be a well-formed, allowlisted SELECT and still name a
+    column that does not exist -- the guard validates statement shape and table
+    access, not column names, because it has no schema to check them against.
+    The first live run produced exactly that: `d.tenant_id` against an alias with
+    no such column.
+
+    Typed separately from `QueryRejectedError` because the caller does something
+    different with it. A rejection means the query was refused before running; this
+    means it ran and failed, and SQLite's message is a better correction to hand
+    back to the model than anything we could infer.
+    """
+
+
 @dataclass(frozen=True, slots=True)
 class QueryResult:
     """Rows plus everything needed to explain how they were obtained."""
@@ -106,7 +122,11 @@ class QueryExecutor:
                     raise QueryTimeoutError(
                         f"Query exceeded the {self._timeout:.0f}s budget and was aborted."
                     ) from exc
-                raise
+                # Anything else is SQLite refusing the statement itself -- an
+                # unknown column, an ambiguous reference. Wrapped rather than
+                # re-raised bare so the SQL agent can turn it into a retry and
+                # then a refusal, instead of a stack trace reaching the user.
+                raise QueryExecutionError(str(exc)) from exc
             finally:
                 connection.set_progress_handler(None, 0)
 
