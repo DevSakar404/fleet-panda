@@ -22,6 +22,7 @@ from typing import Any
 
 from src.agent.session import TenantContext
 from src.agent.sql_agent import SqlAgent, SqlAnswer
+from src.agent.ticket_parser import looks_like_a_ticket, parse_pasted_ticket
 from src.agent.triage_agent import TicketBrief, TriageAgent
 from src.data.repository import Repository
 from src.data.resolver import Candidate, MatchMethod, TenantResolver
@@ -229,19 +230,16 @@ class Router:
         return RouterResponse(kind, answer.answer, Intent.DISPATCH_QUERY, sql_answer=answer)
 
     def _triage(self, text: str, context: TenantContext) -> RouterResponse:
-        """Triage a ticket named by id.
+        """Triage a ticket named by id, or one pasted into the chat.
 
-        A pasted ticket body is recognised by `classify` but not yet parsed into a
-        `Ticket`; that needs a schema for free-text ticket input and is Step 4d.
-        Saying so is better than guessing at the fields.
+        The two arrive as different problems. An id is a lookup into a corpus we
+        trust, and the work is deciding whether this session may see it. A pasted
+        body is untrusted text, and the work is deciding whose ticket it is --
+        see `_triage_pasted`.
         """
         ticket_id = extract_ticket_id(text)
         if ticket_id is None:
-            return RouterResponse(
-                ResponseKind.CLARIFY,
-                "Which ticket? Give me a ticket number, for example 'triage 1083'.",
-                Intent.TICKET_TRIAGE,
-            )
+            return self._triage_pasted(text, context)
 
         # Tenant isolation for the JSON half: a scoped session may only triage its
         # own tenant's tickets. Without this check a rep scoped to tenant 4 could
@@ -267,6 +265,63 @@ class Router:
         brief = self._triage_agent.build_brief(ticket)
         headline = (
             f"Ticket #{brief.ticket_id} for {brief.context.tenant.name}: "
+            f"{brief.assessment.level.value.upper()} "
+            f"(score {brief.assessment.score})."
+        )
+        return RouterResponse(
+            ResponseKind.BRIEF,
+            f"{headline} {brief.summary}".strip(),
+            Intent.TICKET_TRIAGE,
+            brief=brief,
+        )
+
+    def _triage_pasted(self, text: str, context: TenantContext) -> RouterResponse:
+        """Triage a ticket body pasted into the chat rather than named by id.
+
+        The tenant comes from the bound session and never from the pasted text.
+        A body can claim to be from any company, and honouring that claim would
+        let a scoped rep assemble a brief about a different customer by typing one
+        line -- the caller-supplied `tenant_id` hole from SECURITY.md V1 arriving
+        through a different door. So an unscoped session is asked to scope first
+        rather than guessing, which is the same answer the resolver gives to an
+        ambiguous name: say who you mean.
+        """
+        # Shape before ownership. "triage that ticket" carries no ticket at all,
+        # and answering it with "scope to a customer first" would send the reader
+        # to fix the wrong thing.
+        if not looks_like_a_ticket(text):
+            return RouterResponse(
+                ResponseKind.CLARIFY,
+                "Which ticket? Give me a ticket number, for example 'triage 1083', "
+                "or paste the ticket body.",
+                Intent.TICKET_TRIAGE,
+            )
+
+        if not context.is_bound:
+            return RouterResponse(
+                ResponseKind.CLARIFY,
+                "Scope to a customer before pasting a ticket -- a brief is built "
+                "from one customer's history, contract and call record, so I need "
+                "to know whose. Try 'use CFS', or give me a ticket number.",
+                Intent.TICKET_TRIAGE,
+            )
+
+        tenant = self._repository.get_tenant(context.tenant_id)
+        ticket = parse_pasted_ticket(text, tenant.tenant_id, tenant.name)
+        if ticket is None:
+            return RouterResponse(
+                ResponseKind.CLARIFY,
+                "Which ticket? Give me a ticket number, for example 'triage 1083', "
+                "or paste the ticket with a subject line.",
+                Intent.TICKET_TRIAGE,
+            )
+
+        brief = self._triage_agent.build_brief(ticket)
+        # Named rather than numbered, because a pasted ticket has no id -- and the
+        # tenant is stated so the reader can see which customer it was scoped to,
+        # which is the one thing the paste did not get to decide.
+        headline = (
+            f"Pasted ticket for {tenant.name} (tenant {tenant.tenant_id}): "
             f"{brief.assessment.level.value.upper()} "
             f"(score {brief.assessment.score})."
         )

@@ -986,3 +986,48 @@ printed, so a listener not watching the screen gets a partial picture. That is t
 right trade for audio; the terminal still carries everything.
 **Where it lives:** `src/interfaces/voice_chat.py:spoken_text`, `speakable`,
 `normalize_transcript`; `tests/test_voice.py`.
+
+### D-022 · A pasted ticket takes its tenant from the session, never from its own text
+**Date:** 2026-08-30
+**Context:** The assignment's chat mode accepts "a question **or a pasted ticket**"
+(and a ticket "described over voice"). `Router.classify` already recognised a
+pasted body, but `_triage` then asked for a ticket number, so the path did not
+work. Parsing the body is straightforward; deciding *whose ticket it is* is not.
+A pasted body carries no `tenant_id`, and real ticket exports often carry a
+`tenant:` or `Submitted by:` line that looks authoritative.
+**Options considered:**
+A — resolve the tenant from the pasted text (a `tenant:` line, or the submitter's
+email domain) through `TenantResolver`.
+B — take the tenant from the bound session, and refuse to triage a paste in an
+unscoped platform session.
+C — take it from the session when bound, fall back to parsing the text when not.
+**Chosen:** B. A is the caller-supplied `tenant_id` vulnerability from SECURITY.md
+V1 arriving through a different door: a rep scoped to tenant 4 could assemble a
+brief about tenant 7 by typing one line, and every downstream layer would behave
+correctly while doing it — the guard would inject `tenant_id = 7` faithfully,
+because the guard's job is to enforce the context it is given, not to question it.
+C is A with an extra step, and the fallback fires exactly when there is no session
+tenant to check the claim against, which is the worst moment to start trusting the
+input. B keeps the property the rest of the system already has: authority comes
+from the session, and data never chooses its own scope.
+**Trade-off accepted:** an internal platform operator must scope to a customer
+before pasting a ticket, which is one extra command for the one class of user who
+could legitimately mean any tenant. That is the same trade the resolver already
+makes when it refuses an ambiguous name — a brief is built from one customer's
+history, contract and call record, so "which customer" is not a detail we can
+defer. The reply says so and names the command.
+**Where it lives:** `src/agent/router.py:_triage_pasted`,
+`src/agent/ticket_parser.py`. The parser takes `tenant_id` as an argument and has
+no code path that reads one out of the text;
+`tests/test_ticket_parser.py:test_the_pasted_text_cannot_choose_its_own_tenant`
+asserts that a body claiming `tenant_id: 7` is still scoped to the caller's tenant.
+
+**A second decision inside the same change.** `looks_like_a_ticket` gates the
+paste path on shape — a labelled line, or two non-empty lines — because without it
+the bare command `"triage"` parsed as a ticket whose *subject was the word
+triage*, scored against a real customer. The first version checked scope before
+shape, so `"triage that ticket"` in a platform session was told to scope to a
+customer, sending the reader to fix the wrong thing. Shape is now decided first:
+"this is not a ticket" and "this is a ticket, but whose?" are different failures
+and get different sentences — the same distinction `RouterResponse` already draws
+between `CLARIFY` and `REFUSAL`.

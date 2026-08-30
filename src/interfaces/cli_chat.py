@@ -59,6 +59,23 @@ def _format_brief(brief: TicketBrief) -> str:
         ids = ", ".join(f"#{i}" for i in assessment.duplicate_ticket_ids)
         lines += ["", f"  DUPLICATES {ids}"]
 
+    # Printed as well as sent to the narrator. The history is half of what a CSM
+    # reads a brief for, and without a model configured the narrative sections are
+    # empty -- so a brief that only fed past tickets to the prompt showed none at
+    # all on the path that runs without an API key.
+    if context.past_tickets:
+        lines += ["", "  PAST TICKETS"]
+        for past in context.past_tickets:
+            # Status only. `resolution` is deliberately not summarised beside it:
+            # the two disagree in this corpus -- #1031 is status 'open' with a
+            # resolution text, #1032 is 'resolved' with none -- so printing both
+            # on one line reads as a rendering bug rather than as the data quirk
+            # it is. The narrator still receives every resolution in full.
+            lines.append(
+                f"             #{past.ticket_id}  {past.created_at}  "
+                f"{past.status:<8} {past.subject}"
+            )
+
     lines += [
         "",
         f"  DISPATCH   {operations.completed_last_30} completed in the last 30 days "

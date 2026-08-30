@@ -15,8 +15,8 @@ isolation, routing, and escalation is made once, below the transport boundary.
 | | |
 |---|---|
 | Build | Chat and voice both work end to end. No stubs remain. |
-| Tests | **275 pass, no skips.** No test needs an API key, a microphone, or a network connection. |
-| Known gaps | A *pasted* ticket body is recognised but not parsed — triage works by ticket id only (Q-015). The agent has not yet been run against a live model (Q-012). Voice is verified without a microphone in the loop (Q-020). |
+| Tests | **299 pass, no skips.** No test needs an API key, a microphone, or a network connection. |
+| Known gaps | The agent has not yet been run against a live model (Q-012). Voice is verified without a microphone in the loop (Q-020). |
 
 The system has **no HTTP API**. It ships as two terminal transports. Where this
 document refers to "the endpoint" or "deploying as a service", that is a
@@ -133,7 +133,7 @@ This documentation is modular (hub-and-spoke, following the
 
 | Document | What it is |
 |---|---|
-| [DECISIONS.md](DECISIONS.md) | The dated engineering journal (D-001 … D-021), plus the cost model, the 150-tenant scaling answer, and the end-customer-agent answer. `docs/architecture_decisions.md` is the narrative digest of this file. |
+| [DECISIONS.md](DECISIONS.md) | The dated engineering journal (D-001 … D-022), plus the cost model, the 150-tenant scaling answer, and the end-customer-agent answer. `docs/architecture_decisions.md` is the narrative digest of this file. |
 | [SECURITY.md](SECURITY.md) | Code-review challenge: three vulnerabilities in a sample text-to-SQL endpoint, each with an attack scenario and the implemented fix. |
 | [RECON.md](RECON.md) | Step 0 data exploration. Explains most of the design. |
 | [DESIGN.md](DESIGN.md) | Request-flow diagrams and module boundaries. |
@@ -167,10 +167,11 @@ src/
   db/                  read-only connection, schema introspection, AST guard, executor
   llm/                 thin provider wrapper, all system prompts
   agent/               session (TenantContext), router, conversation, sql_agent,
-                       triage_agent, escalation (pure scoring, no LLM)
+                       triage_agent, ticket_parser, escalation (pure, no LLM)
   interfaces/          cli_chat, voice_chat, speech (the only file touching audio)
-tests/                 275 tests; entity resolution, tenant isolation, the 8
-                       questions, security fixes, escalation, triage, voice
+tests/                 299 tests; entity resolution, tenant isolation, the 8
+                       questions, security fixes, escalation, triage, ticket
+                       parsing, voice
 ```
 
 ## Non-negotiable constraints

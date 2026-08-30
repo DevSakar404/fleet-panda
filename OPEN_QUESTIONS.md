@@ -2,10 +2,40 @@
 
 ## Session summary
 
-**Updated 2026-08-29 (voice session). Chat and voice both work end to end.
-275 tests pass. Fourteen commits.**
+**Updated 2026-08-30 (documentation + gap-closing session). Chat and voice both
+work end to end. 299 tests pass.**
 
-### This session: voice mode (Step 5)
+### This session: an audit against the assignment, and the three gaps it found
+
+Read `REQUIEMENT_README.md` line by line against the build. Deliverables and
+`DECISIONS.md` content were complete. Three real gaps, all now closed:
+
+| Gap | Requirement | Fix |
+|---|---|---|
+| A pasted ticket was recognised but not triaged | "types a question **or pastes a ticket**", stated twice | `src/agent/ticket_parser.py` + `router._triage_pasted` (D-022) |
+| `past_tickets` were gathered and sent to the model but never printed | "relevant past tickets **and** duplicate detection" | `PAST TICKETS` section in `cli_chat._format_brief` |
+| The three required scenarios were covered by **one** ticket | "test with **at least 3 tickets**" | three separate tickets, three tenants, each isolating one signal |
+
+**D-022 diverges from what Q-015 proposed, deliberately.** Q-015 suggested resolving
+a `tenant_name` out of the pasted body. The tenant now comes from the bound session
+instead, and an unscoped session is asked to scope before pasting — resolving a
+tenant out of untrusted text is SECURITY.md V1 arriving through a different door.
+Both entries carry the argument; it is the one thing in this session worth
+overruling me on.
+
+**Two bugs found while writing the tests, not while writing the code.** The parser
+turned the bare command `"triage"` into a ticket whose *subject was the word
+triage*, scored against a real customer — `looks_like_a_ticket` now gates on shape.
+And the first version checked scope before shape, so `"triage that ticket"` was told
+to scope to a customer, sending the reader to fix the wrong thing.
+
+**The guard was probed rather than trusted.** Twelve legitimate-but-awkward SQL
+shapes — comma joins, correlated subqueries, scalar subqueries, derived tables,
+three-level nesting, a CTE shadowing a real table name, an attacker supplying their
+own `WHERE tenant_id = 7` — every table reference received a predicate. Seven attack
+shapes were rejected. No passing query reached an unfiltered tenant-scoped table.
+
+### The previous session: voice mode (Step 5)
 
 `Conversation` extracted first (D-018), then the transport built on top:
 
@@ -99,8 +129,6 @@ Eighteen questions below. In priority order:
 - **Q-012 — the agent has never spoken to a real model.** Still the biggest unknown.
   Q-017 is proof of the category: nothing in a fake-LLM suite can catch how the real
   API is called. Assume there are more once the key is in.
-- **Q-015 — a pasted ticket is recognised but not parsed.** Last functional gap
-  against the assignment's stated chat behaviour. ~1 hour.
 - **Q-018 — structured outputs** would delete the fence-stripping JSON parser
   entirely and turn a class of refusal into an impossibility. ~30 minutes, best done
   while watching real responses.
@@ -122,12 +150,14 @@ Eighteen questions below. In priority order:
    (the `status = 'completed'` filter — the difference between 1467.7 and
    1564.92, which no error will ever reveal). This is 15% of the grade and it is
    still unverified.
-3. **Parse a pasted ticket body (Q-015).** The last functional gap against the
-   assignment's stated chat behaviour: `classify()` recognises a pasted ticket,
-   `_triage()` then asks for a ticket number. ~1 hour.
+3. **Adopt provider-native structured outputs (Q-018).** Deletes the
+   fence-stripping JSON parser in `sql_agent._parse_generation` entirely and turns a
+   class of refusal into an impossibility. Best done during task 2, while real
+   responses are already on screen. ~30 minutes.
 
-Q-018 (structured outputs) is best done during task 2, while real responses are
-already on screen.
+~~Parse a pasted ticket body (Q-015)~~ — **done 2026-08-30**, see D-022. Note that it
+was built to a different design than the one proposed in Q-015; the reasoning is in
+both entries and is worth your review.
 
 ---
 
@@ -303,21 +333,37 @@ anything.
 logic comes up — the honest answer is that the ordering is defensible and the magnitudes
 are a guess awaiting feedback data.
 
-### Q-015 · A pasted ticket is recognised but not parsed — FUNCTIONAL GAP
+### Q-015 · A pasted ticket is recognised but not parsed — RESOLVED 2026-08-30
 **Context:** The assignment says the user "types a question or **pastes a ticket**".
-`Router.classify` detects a pasted ticket body (multi-line with form labels) and routes
-it to triage, but `_triage` then needs a ticket **id** and asks for one. Triage works
-today only for tickets already in `tickets.json`, addressed by number.
-**Taken:** made the limitation explicit in the reply rather than guessing at the fields.
-Parsing free-text into a `Ticket` needs a decision about what happens when the paste has
-no tenant, no product_area, or a product_area outside the known vocabulary — and
-inventing a `tenant_id` is precisely the failure this system is built to prevent.
-**Needs you to:** decide the shape. My view: an LLM extraction call into a Pydantic
-`PastedTicket` (subject, description, product_area, tenant_name), then run the tenant
-name through `TenantResolver` and **refuse if it does not resolve** rather than
-defaulting to the session's tenant. That reuses D-003's fail-closed rule instead of
-adding a second one. Roughly an hour, and it is the last gap between the current build
-and the assignment's stated chat behaviour.
+`Router.classify` detected a pasted ticket body and routed it to triage, but `_triage`
+then needed a ticket **id** and asked for one, so the path did not work.
+**Taken:** built in `src/agent/ticket_parser.py` and `router.py:_triage_pasted`, logged
+as D-022. A pasted body is parsed with regex label matching — no LLM call, so the paste
+path costs nothing and works without an API key like the rest of triage. Unknown
+`product_area` and `priority` values are dropped to a blank and to `medium` (which
+scores zero) rather than carried, so a bad field cannot inflate an escalation.
+
+**This diverges from the shape proposed here, and the divergence is the point.** The
+proposal was to extract `tenant_name` from the paste, resolve it through
+`TenantResolver`, and refuse if it did not resolve — reusing D-003's fail-closed rule.
+What I built instead takes the tenant from the **bound session** and refuses to triage a
+paste in an unscoped session.
+
+The reason: resolving a tenant *out of the pasted text* is the caller-supplied
+`tenant_id` vulnerability from SECURITY.md V1 wearing a different hat. In a scoped
+session, honouring a body that names another customer lets a rep assemble tenant 7's
+brief by typing one line — so you would have to add "and it must equal the session
+tenant", at which point the session is the authority and the parsed name is dead weight.
+In an unscoped session there is nothing to check the claim against, which is the worst
+moment to start trusting input. A fail-closed resolver makes a *wrong name* safe; it does
+not make a *lying name* safe, and that is the threat here.
+`tests/test_ticket_parser.py:test_the_pasted_text_cannot_choose_its_own_tenant` pins it.
+
+**Needs you to:** overrule me if you disagree — the cost of my choice is that an internal
+platform operator must scope to a customer before pasting, one extra command for the one
+user who could legitimately mean any tenant. If you want the paste to name its own tenant
+in a platform session only, that is a small change in `_triage_pasted` and I would want it
+written down as its own decision rather than folded into D-022.
 
 ### Q-016 · Intent classification falls through to the query path without a model
 **Context:** `Router.classify` uses heuristics first and only asks the model for

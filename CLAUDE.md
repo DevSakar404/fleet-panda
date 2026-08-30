@@ -204,8 +204,9 @@ against hand-written reference SQL, and end to end through the agent.
   TTS, no audio path. `ResolutionResult.needs_confirmation` and
   `SqlAnswer.date_anchor` already exist to drive read-back and the staleness
   caveat; design around the latency budget (two LLM calls per question).
-- **Pasted-ticket parsing** — `Router.classify` recognises a pasted ticket body but
-  `_triage` needs an id, so triage works by ticket number only (Q-015).
+- ~~**Pasted-ticket parsing**~~ — built 2026-08-30 (D-022). A pasted body is parsed
+  by `src/agent/ticket_parser.py`; the tenant comes from the bound session, never
+  from the text, and an unscoped session is asked to scope before pasting.
 
 ### Two things that will bite a new session
 

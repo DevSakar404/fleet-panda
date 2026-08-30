@@ -233,3 +233,64 @@ def test_a_data_question_without_a_model_refuses_clearly(router):
 def test_empty_input_is_a_clarify_not_a_crash(router):
     for text in ("", "   ", "\n"):
         assert router.route(text, TenantContext.platform()).kind is ResponseKind.CLARIFY
+
+
+# --- pasted ticket bodies -----------------------------------------------------
+#
+# `classify` already recognised a pasted ticket; until now `_triage` then asked
+# for a ticket number, which is the gap these cover. The isolation property is the
+# one worth reading: the tenant comes from the session, never from the paste.
+
+PASTED = """Subject: TankLink readings frozen since Tuesday
+product_area: tank_monitor
+Priority: High
+Submitted by: ops@midwestpetro.com
+
+Our tank monitors stopped reporting on Tuesday morning."""
+
+
+def test_a_pasted_ticket_is_triaged_in_a_scoped_session():
+    response = Router(llm=None).route(PASTED, TenantContext.for_tenant(4))
+
+    assert response.kind is ResponseKind.BRIEF
+    assert response.brief is not None
+    assert response.brief.context.ticket.subject.startswith("TankLink readings frozen")
+    # Scored like any other ticket -- tenant 4 is the low-health, expired-contract
+    # account, and the paste names a module it is not entitled to.
+    assert response.brief.assessment.missing_module == "tank_monitor"
+
+
+def test_a_pasted_ticket_is_scoped_to_the_session_not_to_its_own_text():
+    """The body claims tenant 7. The session is tenant 4. Tenant 4 wins."""
+    claiming = PASTED.replace("Subject:", "tenant_id: 7\nSubject:")
+    response = Router(llm=None).route(claiming, TenantContext.for_tenant(4))
+
+    assert response.kind is ResponseKind.BRIEF
+    assert response.brief.tenant_id == 4
+    assert response.brief.context.tenant.name == "Desert Sun Petroleum"
+
+
+def test_a_pasted_ticket_in_an_unscoped_session_asks_who_it_is_about():
+    """Refuses rather than guessing. A brief is one customer's history, and
+    nothing in the paste is trusted to say which customer that is."""
+    response = Router(llm=None).route(PASTED, TenantContext.platform())
+
+    assert response.kind is ResponseKind.CLARIFY
+    assert response.brief is None
+    assert "scope" in response.text.lower()
+
+
+def test_a_pasted_ticket_brief_carries_the_tenant_in_its_headline():
+    """The paste did not get to choose the tenant, so the reply says which one it
+    was scoped to rather than leaving the reader to assume."""
+    response = Router(llm=None).route(PASTED, TenantContext.for_tenant(4))
+    assert "Desert Sun Petroleum" in response.text
+    assert "tenant 4" in response.text
+
+
+def test_unroutable_text_still_asks_for_a_ticket_number():
+    """A triage-shaped request with neither an id nor a usable subject."""
+    response = Router(llm=None).route("triage   ", TenantContext.for_tenant(4))
+
+    assert response.kind is ResponseKind.CLARIFY
+    assert "ticket number" in response.text

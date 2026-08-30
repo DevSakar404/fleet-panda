@@ -10,7 +10,7 @@ summary: what is done, what is not, and what will bite the next person.
 
 ## Status
 
-Chat and voice both work end to end. **275 tests pass, no skips.** No test
+Chat and voice both work end to end. **299 tests pass, no skips.** No test
 requires an API key, a microphone, or a network connection — every agent test
 drives `tests/conftest.py:FakeLLM`. The build history is a sequence of small
 commits, one step per commit (recon → data → database → agent → transports).
@@ -32,6 +32,7 @@ and end to end through the agent.
 | Escalation | `src/agent/escalation.py` | Pure Python, no LLM. Additive points, account-risk cap (D-010, D-012) |
 | Triage | `src/agent/triage_agent.py` | Five-source fan-in → `TicketBrief` ([spec](specs/ticket_triage_agent_spec.md)). Every section degrades to empty |
 | Router / conversation | `src/agent/{router,conversation}.py` | Router is stateless; `Conversation` owns scope + the confirmation gate, shared by both transports (D-018) |
+| Pasted tickets | `src/agent/ticket_parser.py` | A pasted body is parsed into a `Ticket` and triaged. The tenant comes from the session, never from the text (D-022) |
 | Chat transport | `src/interfaces/cli_chat.py` | Runs without an API key; prints the guard's rewritten SQL beside every answer |
 | Voice transport | `src/interfaces/{voice_chat,speech}.py` | Push-to-talk (D-020); `whisper-1` + `tts-1`; `speech.py` is the only file touching audio. Voice renders our own prose for the ear (D-021) |
 | Docs | this set, plus `DECISIONS.md`, `SECURITY.md`, `RECON.md`, `DESIGN.md` | Cost model, 150-tenant scaling answer, and end-customer isolation answer are all in `DECISIONS.md` |
@@ -44,7 +45,6 @@ and end to end through the agent.
 |---|---|---|
 | **Q-012** | **The agent has never called a real model.** Every test drives `FakeLLM`. Q-017 is the standing proof this matters: `config` once held a dead model id and a `temperature` param current models reject with a 400, and the whole suite stayed green. Assume more of the same once a key is in. | — |
 | **Q-020** | **Voice has never had a microphone in the loop.** Transcript repair, spoken rendering, and the confirmation gate are all under test; capture, the OpenAI speech calls, and real end-to-end latency are not. The latency figures in D-019 are estimates. | — |
-| **Q-015** | **A pasted ticket body is recognised but not parsed.** `Router.classify` detects a pasted ticket; `_triage` then asks for a ticket number. Needs a free-text ticket schema. | ~1 h |
 | Q-018 | Provider-native **structured outputs** would delete the fence-stripping JSON parser and turn a class of refusal into an impossibility. Best done while watching real responses (during Q-012). | ~30 min |
 | Q-002 | The `product_area → module` map (`billing→invoicing`, `reporting→analytics`) is inferred, not documented. Under-flags by design. Needs FleetPanda domain confirmation. | edit |
 | Q-005 | The −10% materiality cut for "declining volume" (Q8) is provisional. | edit |
@@ -106,10 +106,10 @@ The next three tasks, from [`OPEN_QUESTIONS.md`](../OPEN_QUESTIONS.md):
    calendar month vs rolling 30 days) and Q4 (the `status = 'completed'` filter —
    1467.7 vs 1564.92, which no error will ever reveal). This is 15% of the grade
    and still unverified.
-3. **Parse a pasted ticket body (Q-015).** The last functional gap against the
-   assignment's stated chat behaviour.
-
-Do Q-018 (structured outputs) during task 2, while real responses are on screen.
+3. **Adopt provider-native structured outputs (Q-018).** Deletes the
+   fence-stripping JSON parser in `sql_agent._parse_generation` and turns a class
+   of refusal into an impossibility. Best done during task 2, while real responses
+   are already on screen.
 
 ---
 

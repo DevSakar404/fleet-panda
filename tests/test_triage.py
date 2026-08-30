@@ -236,3 +236,112 @@ def test_every_ticket_in_the_corpus_produces_a_brief(agent, repository):
             brief = agent.build_brief(source_ticket, today=TODAY)
             assert brief.ticket_id == source_ticket.ticket_id
             assert brief.assessment.score >= 0
+
+
+# --- the three scenarios the assignment asks for ------------------------------
+#
+# "Test with at least 3 tickets from the provided data": a low-health customer
+# with an expiring contract, an apparent duplicate, and a ticket about a module
+# the customer does not have.
+#
+# test_escalation.py asserts that #1083 is all three at once, which is the
+# interesting case. These are the opposite: three DIFFERENT tickets from three
+# DIFFERENT tenants, each chosen so that exactly one of the three signals fires.
+# A case that isolates one signal is what shows the signal works; a case where
+# all three fire cannot tell you which one produced the level.
+
+SCENARIO_LOW_HEALTH = 1050      # Timber Ridge Oil (t8) -- health 39, contract in days
+SCENARIO_DUPLICATE = 1058       # Prairie Wind Fuels (t9) -- refiling of #1057
+SCENARIO_MODULE_GAP = 1005      # Cascade Fuel Services (t1) -- billing, no invoicing
+
+
+def brief_for(agent, repository, ticket_id: int):
+    return agent.build_brief(ticket(repository, ticket_id), today=TODAY)
+
+
+def test_scenario_low_health_customer_with_an_expiring_contract(agent, repository):
+    """Health below the assignment's 40 cut, and a contract inside the renewal
+    window -- with no duplicate and no entitlement gap to share the credit."""
+    brief = brief_for(agent, repository, SCENARIO_LOW_HEALTH)
+    tenant, assessment = brief.context.tenant, brief.assessment
+
+    assert tenant.health_score < config.HEALTH_SCORE_CRITICAL
+    days_left = (tenant.contract_end_date - TODAY).days
+    assert 0 <= days_left <= config.CONTRACT_RENEWAL_WINDOW_DAYS
+
+    fired = {s.name for s in assessment.signals}
+    assert "health_critical" in fired
+    assert "contract_renewal" in fired
+    # Isolated: neither of the other two scenarios is contributing here.
+    assert assessment.duplicate_ticket_ids == ()
+    assert assessment.missing_module is None
+
+    # Account state alone reaches URGENT and no further -- the D-012 cap.
+    assert assessment.level is EscalationLevel.URGENT
+    assert assessment.ticket_risk == 0
+    assert assessment.account_risk_capped
+
+
+def test_scenario_a_ticket_that_duplicates_an_earlier_one(agent, repository):
+    """A healthy, well-funded account, so the duplicate is the whole signal."""
+    brief = brief_for(agent, repository, SCENARIO_DUPLICATE)
+    assessment = brief.assessment
+
+    assert 1057 in assessment.duplicate_ticket_ids
+    assert assessment.is_duplicate
+
+    fired = {s.name for s in assessment.signals}
+    assert "duplicate" in fired
+    # Isolated: the account is healthy and entitled.
+    assert "health_critical" not in fired and "health_at_risk" not in fired
+    assert assessment.missing_module is None
+
+    # The brief has to say which earlier ticket, not just that there was one.
+    reason = next(s.reason for s in assessment.signals if s.name == "duplicate")
+    assert "#1057" in reason
+
+
+def test_scenario_a_ticket_about_a_module_the_customer_lacks(agent, repository):
+    """A billing ticket from a tenant with no invoicing module."""
+    brief = brief_for(agent, repository, SCENARIO_MODULE_GAP)
+    context, assessment = brief.context, brief.assessment
+
+    assert assessment.missing_module == "invoicing"
+    assert "invoicing" not in context.tenant.modules_active
+    assert context.ticket.product_area == "billing"
+
+    fired = {s.name for s in assessment.signals}
+    assert "module_mismatch" in fired
+    # Isolated: healthy account, no repeat filing.
+    assert assessment.duplicate_ticket_ids == ()
+    assert "health_critical" not in fired and "health_at_risk" not in fired
+
+    # billing is the one product area with no KB coverage, so this scenario also
+    # pins the honest-empty path: no article rather than the least-bad one.
+    assert context.kb_articles == ()
+    assert "knowledge base" in context.missing_sources
+
+
+@pytest.mark.parametrize(
+    "ticket_id",
+    [SCENARIO_LOW_HEALTH, SCENARIO_DUPLICATE, SCENARIO_MODULE_GAP],
+    ids=["low_health", "duplicate", "module_gap"],
+)
+def test_every_scenario_brief_carries_what_the_brief_must_include(agent, repository, ticket_id):
+    """The assignment's list of required brief contents, asserted per scenario.
+
+    The suggested-response draft is not here: it is the one narrative section, so
+    it needs an LLM. `test_narration_fills_the_three_prose_sections` covers it.
+    """
+    brief = brief_for(agent, repository, ticket_id)
+    context, assessment = brief.context, brief.assessment
+
+    assert context.tenant.name and context.tenant.assigned_csm      # customer profile
+    assert context.tenant.health_score and context.tenant.carr
+    assert assessment.level in EscalationLevel                      # escalation + reasoning
+    assert assessment.reasons
+    assert all(reason.strip() for reason in assessment.reasons)
+    assert context.past_tickets                                     # history + duplicates
+    assert context.operations.anchor_date                           # operational snapshot
+    assert isinstance(context.kb_articles, tuple)                   # KB, possibly empty
+    assert isinstance(context.calls, tuple)                         # call context

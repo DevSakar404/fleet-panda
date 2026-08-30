@@ -3,8 +3,8 @@
 ← [README](../../README.md) · [Architecture decisions](../architecture_decisions.md) · Sibling spec: [tenant isolation](tenant_isolation_spec.md)
 
 **Status:** implemented and tested (`tests/test_triage.py`,
-`tests/test_escalation.py`). Triage is invoked by ticket id. A *pasted* ticket
-body is recognised by the router but not yet parsed into a ticket (Q-015).
+`tests/test_escalation.py`, `tests/test_ticket_parser.py`). Triage is invoked
+either by ticket id or by pasting a ticket body into the chat.
 
 ---
 
@@ -12,12 +12,20 @@ body is recognised by the router but not yet parsed into a ticket (Q-015).
 
 ```
 Router._triage(text, context)
-  → extract_ticket_id(text)                 # "triage 1083", "#1083", or a bare 4-digit line
-  → visibility check (§6)
-  → TriageAgent.build_brief(ticket) -> TicketBrief
+  ├── extract_ticket_id(text)          "triage 1083" / "#1083" / a bare 4-digit line
+  │     → visibility check (§8)        a scoped session sees only its own tickets
+  │     → TriageAgent.build_brief(ticket)
+  │
+  └── no id → _triage_pasted(text, context)                            (D-022)
+        → looks_like_a_ticket(text)    a labelled line, or two non-empty lines
+        → context.is_bound?            unscoped sessions are asked to scope first
+        → parse_pasted_ticket(text, tenant_id, tenant_name)
+        → TriageAgent.build_brief(ticket)
 ```
 
-**Input:** a `Ticket` (loaded from `tickets.json`), located by id.
+**Input:** a `Ticket` — either loaded from `tickets.json` by id, or parsed from a
+pasted body. The parsed form takes its tenant from the bound session and never
+from the pasted text; see §8.
 **Output:** a `TicketBrief` — a frozen dataclass with a deterministic half
 (`context: TicketContext`, `assessment: EscalationAssessment`) and a narrative
 half (`summary`, `escalation_reasoning`, `suggested_response`).
@@ -240,6 +248,11 @@ malformed narrative costs formatting, not the brief.
   `_index_by_tenant`).
 - The operational snapshot runs under `TenantContext.for_tenant(tenant_id)` —
   same guard, same injected predicate as a typed question.
+- **A pasted ticket takes its tenant from the session, never from its own text**
+  (D-022). `parse_pasted_ticket` receives `tenant_id` as an argument and has no
+  path that reads one out of the body, so a paste claiming `tenant_id: 7` is still
+  scoped to the caller's tenant. An unscoped platform session is asked to scope
+  first rather than having a customer guessed for it.
 - **Visibility check** (`Router._triage`): in a bound session, a ticket whose
   `tenant_id` differs from the session's returns the *same* "I can't find ticket
   #N" message as a missing ticket — not a distinguishable refusal (enumeration
@@ -258,11 +271,18 @@ malformed narrative costs formatting, not the brief.
 
 ### The three required scenario tickets
 
-| Scenario | What the brief must show |
-|---|---|
-| Low-health customer (health < 40) with an expiring contract | `health_critical` (30) + `contract_expired`/`contract_renewal` (25/18) → account risk at or near the 55 cap → **URGENT** from the account alone, before the ticket is weighed |
-| Apparent duplicate of an earlier ticket | `find_duplicates` populates `context.duplicates`; `duplicate` or `duplicate_cluster` signal; `assessment.duplicate_ticket_ids` lists the earlier ids; narrator notes the repeat |
-| Ticket referencing a module the customer lacks | `repository.module_mismatch` returns the missing module; `module_mismatch` signal (10); `assessment.missing_module` set; suggested response points at entitlement, not a bug fix |
+Asserted twice over. `tests/test_escalation.py:test_ticket_1083_is_all_three_test_cases_at_once`
+pins the convergent case — #1083 is all three at once. `tests/test_triage.py`
+asserts three **separate** tickets from three separate tenants, each chosen so
+that exactly one of the three signals fires: a case that isolates one signal is
+what shows the signal works, while a case where all three fire cannot tell you
+which produced the level.
+
+| Scenario | Isolating ticket | What the brief must show |
+|---|---|---|
+| Low-health customer (health < 40) with an expiring contract | **#1050** Timber Ridge Oil (t8), health 39, contract in 12 days | `health_critical` (30) + `contract_renewal` (18) → account risk hits the 55 cap → **URGENT** from the account alone, with `ticket_risk == 0` |
+| Apparent duplicate of an earlier ticket | **#1058** Prairie Wind Fuels (t9), health 88 | `duplicate` signal naming **#1057**; `assessment.duplicate_ticket_ids` carries it. The account is healthy, so the duplicate is the whole signal |
+| Ticket referencing a module the customer lacks | **#1005** Cascade Fuel Services (t1), health 82 | `module_mismatch` → `assessment.missing_module == "invoicing"`. Also pins the honest-empty KB path: `billing` has no article, so `kb_articles == ()` |
 
 ---
 
@@ -270,6 +290,5 @@ malformed narrative costs formatting, not the brief.
 
 | Ref | Gap |
 |---|---|
-| Q-015 | A pasted ticket body is recognised by `Router.classify` but not parsed into a `Ticket`; triage works by ticket id only. Needs a free-text ticket schema. |
 | Q-012 | The narrative call has never run against a live model — every test drives `tests/conftest.py:FakeLLM`. |
 | Q-002, Q-005, Q-014 | Domain judgements pending human review: the `billing→invoicing` area/module mapping, the −10% decline cut, the escalation weights. |

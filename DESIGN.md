@@ -4,9 +4,9 @@ The walkthrough script. `RECON.md` explains *why* the design is shaped this way;
 `DECISIONS.md` records the contested choices; this file is the map you read while
 tracing a request end to end.
 
-**Status:** everything below is built and tested. Note that a *pasted* ticket body
-reaches `triage_agent` only as a ticket id today — see OPEN_QUESTIONS.md Q-015 —
-and that voice has been verified without a microphone in the loop (Q-020).
+**Status:** everything below is built and tested. A pasted ticket body is parsed
+and triaged (D-022); note that voice has been verified without a microphone in the
+loop (Q-020).
 
 ---
 
