@@ -215,6 +215,7 @@ ranking). Either firing is enough to refuse.
 | Deterministic escalation | Reproducible, explainable-from-code decisions | Weights are a first-pass calibration pending human review |
 | Two clocks | Non-empty answers on stale data; correct contract math | The reader must track which clock a number is on |
 | Two-call SQL split | The step that emits numbers cannot fabricate them | Two round trips per question (latency budget noted in [D-019](../DECISIONS.md)) |
+| Prompt caching on SQL schema card | ~26% cost reduction on questions; reduced voice latency | Schema card must remain >= 1024 tokens to trigger provider caching |
 
 For the cost model, the 150-tenant scaling analysis, and the two-layer
 end-customer isolation design, see the back half of [`DECISIONS.md`](../DECISIONS.md).

@@ -34,6 +34,8 @@ class LLMResponse:
     input_tokens: int
     output_tokens: int
     model: str
+    cache_creation_tokens: int = 0
+    cache_read_tokens: int = 0
 
 
 class LLMClient:
@@ -79,6 +81,7 @@ class LLMClient:
         user: str,
         max_tokens: int = config.LLM_MAX_TOKENS,
         effort: str = config.LLM_EFFORT_SQL,
+        cache_system: bool = False,
     ) -> LLMResponse:
         """One turn, no history. Every caller here is stateless by design.
 
@@ -86,25 +89,45 @@ class LLMClient:
         current Claude models and return a 400. `output_config.effort` is the
         replacement lever -- it controls how much thinking the model does, which
         is the knob that actually matters for both of this system's calls.
+
+        `cache_system` enables Anthropic prompt caching (`cache_control`) on the
+        system prompt block when supported (e.g. the 1,165-token schema card).
         """
         if self.provider == "anthropic":
+            if cache_system:
+                system_param: Any = [
+                    {
+                        "type": "text",
+                        "text": system,
+                        "cache_control": {"type": "ephemeral"},
+                    }
+                ]
+            else:
+                system_param = system
+
             message = self._client.messages.create(
                 model=self._model,
                 max_tokens=max_tokens,
                 output_config={"effort": effort},
-                system=system,
+                system=system_param,
                 messages=[{"role": "user", "content": user}],
             )
+            usage = message.usage
+            cache_creation = getattr(usage, "cache_creation_input_tokens", 0) or 0
+            cache_read = getattr(usage, "cache_read_input_tokens", 0) or 0
             return LLMResponse(
                 text="".join(b.text for b in message.content if b.type == "text"),
-                input_tokens=message.usage.input_tokens,
-                output_tokens=message.usage.output_tokens,
+                input_tokens=usage.input_tokens,
+                output_tokens=usage.output_tokens,
                 model=self._model,
+                cache_creation_tokens=cache_creation,
+                cache_read_tokens=cache_read,
             )
 
         # OpenAI: the system prompt is a message rather than a parameter, and
         # `effort` has no equivalent on chat.completions -- it is dropped rather
         # than translated, because a wrong translation is worse than none.
+        # OpenAI caches automatically for prefixes >= 1024 tokens.
         completion = self._client.chat.completions.create(
             model=self._model,
             max_tokens=max_tokens,
@@ -114,9 +137,14 @@ class LLMClient:
             ],
         )
         usage = completion.usage
+        cached_tokens = 0
+        if usage and hasattr(usage, "prompt_tokens_details") and usage.prompt_tokens_details:
+            cached_tokens = getattr(usage.prompt_tokens_details, "cached_tokens", 0) or 0
+
         return LLMResponse(
             text=completion.choices[0].message.content or "",
             input_tokens=usage.prompt_tokens if usage else 0,
             output_tokens=usage.completion_tokens if usage else 0,
             model=self._model,
+            cache_read_tokens=cached_tokens,
         )

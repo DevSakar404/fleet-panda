@@ -70,7 +70,7 @@ class FakeLLM:
     def complete(self, system: str, user: str, **kwargs) -> "LLMResponse":  # noqa: F821
         from src.llm.client import LLMResponse
 
-        self.calls.append({"system": system, "user": user})
+        self.calls.append({"system": system, "user": user, **kwargs})
         if not self.replies:
             raise AssertionError(
                 f"FakeLLM ran out of scripted replies on call {len(self.calls)}. "

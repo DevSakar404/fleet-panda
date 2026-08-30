@@ -31,6 +31,8 @@ def test_answers_a_scoped_question_end_to_end():
     assert "tenant_id = 4" in answer.sql     # the guard's predicate, not the model's
     assert answer.answer == "Tenant 4 completed 415 orders."
     assert len(llm.calls) == 2               # generation, then synthesis
+    assert llm.calls[0].get("cache_system") is True, "Call 1 (SQL generation) must enable prompt caching"
+    assert llm.calls[1].get("cache_system") is not True, "Call 2 (Synthesis) does not cache prompt"
 
 
 def test_the_synthesis_call_receives_rows_and_the_anchor_not_the_question_alone():

@@ -145,7 +145,7 @@ class SqlAgent:
 
     def _generate(self, system: str, user: str) -> SqlGeneration:
         """Call the model and validate its JSON reply."""
-        response = self._llm.complete(system=system, user=user)
+        response = self._llm.complete(system=system, user=user, cache_system=True)
         return self._parse_generation(response.text)
 
     @staticmethod

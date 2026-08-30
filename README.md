@@ -112,8 +112,14 @@ itself and every assertion stays unchanged. One PASS/FAIL line per question is
 the score (~2 API calls per question):
 
 ```bash
-FLEETPANDA_EVAL_LLM=1 .venv/bin/python -m pytest tests/test_sql_questions.py -v
+env $(cat .env | xargs) FLEETPANDA_EVAL_LLM=1 .venv/bin/python -m pytest tests/test_sql_questions.py -v
 ```
+
+#### Why live model evaluation is important
+1. **Catches Real API & SDK Breaking Changes:** The standard unit test suite runs against `FakeLLM` with canned responses so it runs fast and offline. However, mocks cannot detect model deprecations, invalid API keys, network issues, or parameter mismatches (e.g., removing `temperature` on reasoning models).
+2. **Validates Dynamic SQL Generation & Ambiguities:** It proves the model generates functionally correct SQL for real database edge cases (such as filtering `status = 'completed'` or referencing the `MAX(delivery_date)` anchor instead of `date('now')`).
+3. **Tests AST Query Guard & Multi-Tenant Boundaries Under Real Conditions:** Ensures that non-deterministic, model-generated SQL passes AST validation and properly respects tenant boundary enforcement.
+4. **Dual-Layer Diagnosability:** Reference tests verify data/schema layer integrity, while live tests verify the LLM agent layer. If reference passes and live fails, the prompt or SQL generation needs tuning; if both fail, the underlying data/guard layer is broken.
 
 Measured on `gpt-4o-mini`: **isolation 7/7** (four cross-tenant refusals, three
 scoped allowances) and **data correctness 7-8 of 8**. Only Q8 still moves between

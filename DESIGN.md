@@ -151,6 +151,7 @@ The rule is one reason to change per file. Concretely:
 | `db/executor.py` | resource limits and the final check | limits change |
 | `agent/session.py` | who is asking and what they may see | a third scope appears (end-customers) |
 | `llm/prompts.py` | every system prompt | prompt tuning — in one place, for the walkthrough |
+| `llm/client.py` | thin provider wrapper & prompt caching | provider changes or token tracking needs |
 
 Two seams carry the "extend without editing agent logic" requirement:
 

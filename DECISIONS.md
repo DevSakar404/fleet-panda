@@ -624,13 +624,17 @@ receives a finished context pack and writes three prose sections.
 scale; correctness is. That is the actual argument for defaulting to the strongest
 model rather than the cheapest.
 
-### The cheapest available optimisation
+### The cheapest available optimisation (Implemented)
 
 The 1,165-token SQL system prompt is **byte-identical on all 100 questions per
 day** — it is the introspected schema card, which changes only when the schema
 does. Prompt caching it (write at ~1.25×, reads at ~0.1×) drops input from 212,600
-to ~109,090 tokens/day: **$2.03 → $1.51/day, 26% cheaper**, one `cache_control`
-parameter. It also cuts latency on the voice path, which matters more.
+to ~109,090 tokens/day: **$2.03 → $1.51/day, 26% cheaper**, with `cache_system=True`
+in `SqlAgent._generate()` and `LLMClient.complete()`. It also cuts latency on the
+voice path, which matters more.
+
+- **Anthropic:** `LLMClient` sends `cache_control: {"type": "ephemeral"}` on the system prompt.
+- **OpenAI:** Prefix caching is applied automatically for prompts >= 1024 tokens and recorded via `prompt_tokens_details.cached_tokens`.
 
 Two caveats: the minimum cacheable prefix is ~1024 tokens and the card is 1,165, so
 it only just qualifies — trimming the card would silently disable caching. And the
