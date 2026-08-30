@@ -477,8 +477,15 @@ legitimate user, so nothing was lost. Tests:
 from a tenant-1 session and asserts byte-equality with the not-found reply for all
 77 it may not see.
 
-## Not audited
+## The voice path
 
-**Voice mode does not exist** — no STT, no TTS, no audio path. No claim about a
-vulnerability *in* the voice agent can be validated. F2 is the closest real thing: a
-defect in the shared core that voice would expose most sharply.
+Voice mode was built after this audit (`interfaces/speech.py`, `interfaces/voice_chat.py`),
+and it inherits the same isolation and confirmation controls because it runs over the
+shared `agent/conversation.py` core rather than a parallel implementation. F2 above was
+this audit's prediction of the voice-specific risk before voice existed — a
+self-asserted, inexact scope binding — and it is exactly what STT surfaces: a mangled
+company name that resolves *closed* to the wrong tenant. The `ResponseKind.CONFIRM`
+gate is the fix, and it is enforced in the shared core, so it holds on the voice
+transport by construction. The audio layer itself (`speech.py`) takes only bytes and
+returns only text/bytes; it makes no tenant or authority decision, so nothing in it is
+on the isolation path.

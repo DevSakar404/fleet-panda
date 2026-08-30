@@ -192,18 +192,21 @@ updated every session.
 | Database | `db/{connection,schema,guard,executor}.py` | Three isolation layers. The guard injects `tenant_id` per SELECT scope, including subqueries, derived tables and CTE bodies. |
 | Session | `agent/session.py` | `TenantContext`: TENANT or PLATFORM. Questions 1, 2, 7 and 8 are cross-tenant and are refused when scoped. |
 | Agent | `agent/{sql_agent,escalation,triage_agent,router}.py` | Two LLM calls per question (D-007); escalation is pure Python (D-010, D-012); triage fans in five sources. |
-| Transport | `interfaces/cli_chat.py` | Runs without an API key — triage, scoping and every refusal path are deterministic. |
-| Docs | `RECON.md`, `DESIGN.md`, `DECISIONS.md`, `SECURITY.md`, `OPEN_QUESTIONS.md` | All assignment deliverables written except voice. |
+| Transport | `interfaces/{cli_chat,voice_chat}.py`, `interfaces/speech.py` | Chat runs without an API key — triage, scoping and every refusal path are deterministic. Voice is push-to-talk (`whisper-1` in, `tts-1` out) over the shared `Conversation` core (D-018). |
+| Docs | `RECON.md`, `DESIGN.md`, `DECISIONS.md`, `SECURITY.md`, `OPEN_QUESTIONS.md` | Every assignment deliverable is written, voice included. |
 
-**No stubs remain. 202 tests pass.** The eight graded questions are asserted twice:
+**No stubs remain. 301 tests pass.** The eight graded questions are asserted twice:
 against hand-written reference SQL, and end to end through the agent.
 
 ### Not built
 
-- **Voice mode (Step 5)** — the only remaining assignment deliverable. No STT, no
-  TTS, no audio path. `ResolutionResult.needs_confirmation` and
-  `SqlAnswer.date_anchor` already exist to drive read-back and the staleness
-  caveat; design around the latency budget (two LLM calls per question).
+Nothing required remains. Chat and voice both run end to end; the last two
+requirements closed were voice mode (Step 5) and pasted-ticket triage.
+
+- ~~**Voice mode (Step 5)**~~ — built. `interfaces/speech.py` owns the audio
+  (mic capture, `whisper-1`, `tts-1`); `interfaces/voice_chat.py` is the
+  push-to-talk loop with `speakable()` / `normalize_transcript`; the confirmation
+  gate and scope live in the shared `agent/conversation.py` (D-018…D-021).
 - ~~**Pasted-ticket parsing**~~ — built 2026-08-30 (D-022). A pasted body is parsed
   by `src/agent/ticket_parser.py`; the tenant comes from the bound session, never
   from the text, and an unscoped session is asked to scope before pasting.
@@ -215,6 +218,12 @@ against hand-written reference SQL, and end to end through the agent.
    model ID that no longer exists and the client passed a `temperature` parameter
    that current models reject with a 400 — both sat there while the whole suite
    passed (Q-017). Verify current model IDs and parameters before writing API code.
+   Verified 2026-08-30 against the current Anthropic reference: `claude-opus-5` +
+   `output_config={"effort": ...}` + no sampling params is the correct shape, and
+   `client.py` matches it. Note the residual tuning risk: on Opus 5 adaptive
+   thinking is on by default and its tokens count against `LLM_MAX_TOKENS` (2048),
+   so a hard SQL generation could crowd the JSON output — bump it if a live answer
+   ever truncates.
 2. **The data ends 2026-05-29.** Anchored on `date('now')`, four of the eight graded
    questions return zero rows. Relative windows anchor on `MAX(delivery_date)` and
    the agent states the anchor in its reply (D-001). Contract proximity is the
