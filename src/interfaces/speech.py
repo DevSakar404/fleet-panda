@@ -18,12 +18,19 @@ PortAudio and a working audio device a prerequisite for running the tests.
 from __future__ import annotations
 
 import io
+import queue
+import re
+import shutil
 import subprocess
 import sys
 import threading
 import wave
 
 from src import config
+
+# Split on sentence-final punctuation followed by a space, keeping the punctuation
+# on the sentence. Used to stream TTS one sentence at a time (see `_speak_streaming`).
+_SENTENCE_SPLIT = re.compile(r"(?<=[.!?]) +")
 
 
 class AudioUnavailableError(RuntimeError):
@@ -121,12 +128,37 @@ def _to_wav(pcm: bytes) -> bytes:
     return buffer.getvalue()
 
 
+def _build_speech_prompt() -> str:
+    """Prime Whisper's decoder with our vocabulary via `initial_prompt`.
+
+    Whisper biases toward words it has just "seen": feeding it the tenant names,
+    their aliases and our jargon makes it far likelier to emit "CFS", "GLFC" or
+    "TankLink" as written, instead of the phonetic guesses ("see eff ess") that the
+    regex repair in `voice_chat.py` then has to undo. This is the cheaper fix --
+    correct at the source rather than patched after.
+
+    Built from the data files so a new tenant or alias needs no edit here. Loaders
+    are imported inside the function to keep `speech.py`'s module-load side-effect
+    free, the same reason the audio backends are imported lazily.
+    """
+    from src.data.loaders import load_tenant_aliases, load_tenants
+
+    names = [t.name for t in load_tenants()]
+    aliases = [a.alias for a in load_tenant_aliases()]
+    terms = names + aliases + list(config.SPEECH_PROMPT_JARGON)
+    return "FleetPanda dispatch support. Vocabulary: " + ", ".join(terms) + "."
+
+
 class SpeechClient:
-    """Transcription and synthesis over the OpenAI SDK.
+    """Transcription and synthesis over the OpenAI SDK, with an offline fallback.
 
     A class rather than two functions so the SDK client is constructed once and
     the key is validated at startup. Discovering a missing key at the moment
     someone speaks is a bad first impression of a voice agent.
+
+    When no key is present it drops to `offline` mode: synthesis goes through the
+    macOS `say` command so the loop can be demoed without an API key. There is no
+    offline speech-to-text, so `voice_chat.py` reads typed input in that mode.
     """
 
     def __init__(self, api_key: str | None = None) -> None:
@@ -134,14 +166,27 @@ class SpeechClient:
 
         key = api_key or os.environ.get("OPENAI_API_KEY")
         if not key:
-            raise SpeechConfigurationError(
-                "OPENAI_API_KEY is not set. Voice mode uses it for both speech "
-                "recognition and speech synthesis. Copy .env.example to .env and "
-                "add your key, or export it in the shell."
-            )
-        from openai import OpenAI
+            if not shutil.which("say"):
+                raise SpeechConfigurationError(
+                    "OPENAI_API_KEY is not set and macOS `say` is unavailable, so "
+                    "there is no way to synthesise speech. Copy .env.example to .env "
+                    "and add your key, or export it in the shell."
+                )
+            self.offline = True
+            self._client = None
+            self._initial_prompt = ""
+            self._sdk_error: type[Exception] | tuple = ()  # nothing to catch offline
+            return
 
+        from openai import OpenAI, OpenAIError
+
+        self.offline = False
         self._client = OpenAI(api_key=key)
+        self._initial_prompt = _build_speech_prompt()
+        # Held rather than imported at module scope: `openai` is a lazy dependency
+        # (the test suite runs without it installed), so its exception type can only
+        # be named once we know a key is present and the import has succeeded.
+        self._sdk_error = OpenAIError
 
     def transcribe(self, wav_bytes: bytes) -> str:
         """Speech to text. Returns "" for an empty or unintelligible recording.
@@ -149,8 +194,13 @@ class SpeechClient:
         `language` is pinned rather than auto-detected: a two-second clip of a
         company name gives the detector very little to work with, and it
         occasionally decides a short English utterance is Welsh. Pinning it also
-        shaves a little latency.
+        shaves a little latency. `prompt` biases the decoder toward our vocabulary
+        (see `_build_speech_prompt`).
         """
+        if self.offline:
+            raise SpeechConfigurationError(
+                "Offline mode has no speech-to-text. Type your turn instead."
+            )
         if not wav_bytes:
             return ""
 
@@ -160,21 +210,92 @@ class SpeechClient:
             model=config.STT_MODEL,
             file=("speech.wav", wav_bytes, "audio/wav"),
             language=config.SPEECH_LANGUAGE,
+            prompt=self._initial_prompt,
         )
         return (transcript.text or "").strip()
 
     def speak(self, text: str) -> None:
-        """Text to speech, played through the default output device."""
-        if not text.strip():
+        """Text to speech, played through the default output device.
+
+        Online, sentences are synthesised and played one at a time so the first
+        words are heard while the rest are still synthesising. If OpenAI is
+        unreachable mid-answer (rate limit, quota, network) it degrades to `say`
+        rather than dying in the middle of a demo.
+        """
+        text = text.strip()
+        if not text:
+            return
+        if self.offline:
+            _say(text)
             return
 
+        try:
+            self._speak_streaming(text)
+        except self._sdk_error as exc:
+            print(f"  (speech synthesis unavailable: {exc}; using system voice)",
+                  file=sys.stderr)
+            _say(text)
+
+    def _speak_streaming(self, text: str) -> None:
+        """Synthesise sentence by sentence, playing each as the next is prepared.
+
+        A background thread synthesises ahead into a small bounded queue while this
+        thread plays what is ready. Time-to-first-audio becomes the cost of the
+        first sentence, not the whole answer -- on a multi-sentence brief that is
+        the difference between speaking at once and 1.5-2.5s of dead air.
+
+        The queue is bounded so the producer cannot run far ahead and synthesise an
+        answer the user has already stopped listening to. A synthesis failure is
+        carried back on `error` and re-raised here, so `speak`'s fallback can catch
+        it; anything already played is not replayed by that fallback in the common
+        case, because these calls usually fail on the first sentence, not midway.
+        """
+        sentences = [s for s in _SENTENCE_SPLIT.split(text) if s.strip()]
+        if len(sentences) <= 1:
+            _play_wav(self._synthesize(text))
+            return
+
+        audio: queue.Queue = queue.Queue(maxsize=2)
+        error: list[Exception] = []
+
+        def _produce() -> None:
+            try:
+                for sentence in sentences:
+                    audio.put(self._synthesize(sentence))
+            except self._sdk_error as exc:
+                error.append(exc)
+            finally:
+                audio.put(None)  # end sentinel, always sent
+
+        threading.Thread(target=_produce, daemon=True).start()
+        while (wav := audio.get()) is not None:
+            _play_wav(wav)
+        if error:
+            raise error[0]
+
+    def _synthesize(self, text: str) -> bytes:
+        """One TTS call. Returns WAV bytes. Raises OpenAIError on failure."""
         response = self._client.audio.speech.create(
             model=config.TTS_MODEL,
             voice=config.TTS_VOICE,
             input=text,
             response_format="wav",
+            speed=config.TTS_SPEED,
         )
-        _play_wav(response.read())
+        return response.read()
+
+
+def _say(text: str) -> None:
+    """Speak via the macOS `say` command -- the offline / degraded path.
+
+    `say` takes a words-per-minute rate, so TTS_SPEED (a multiplier) is applied to
+    the default WPM to keep the offline voice roughly as brisk as the online one.
+    """
+    rate = int(config.SAY_BASE_WPM * config.TTS_SPEED)
+    try:
+        subprocess.run(["say", "-r", str(rate), text], check=True)
+    except (OSError, subprocess.CalledProcessError) as exc:
+        raise AudioUnavailableError(f"macOS `say` failed: {exc}") from exc
 
 
 def _play_wav(wav_bytes: bytes) -> None:

@@ -84,6 +84,52 @@ def test_a_two_letter_run_is_left_alone():
 
 @pytest.mark.parametrize(
     "heard, expected",
+    [
+        # Grouping commas that speech-to-text inserts into a 4-digit ticket id.
+        ("triage ticket 1,083", "triage ticket 1083"),
+        ("ticket 10,830", "ticket 10830"),
+        # A dictated tenant number becomes a digit; ordinary prose "three" does not.
+        ("top drivers for tenant three", "top drivers for tenant 3"),
+        ("emergency orders tenant four", "emergency orders tenant 4"),
+        ("tenant twelve", "tenant 12"),
+        ("deliveries in the last three days", "deliveries in the last three days"),
+    ],
+)
+def test_spoken_numbers_are_normalized(heard, expected):
+    """Commas break the ticket parser's \\d+; spoken tenant numbers miss the id
+    match. Both are repaired before the router sees the text."""
+    assert normalize_transcript(heard) == expected
+
+
+def test_build_speech_prompt_carries_tenant_names_aliases_and_jargon(repository):
+    """The Whisper `initial_prompt` must actually contain the terms it primes."""
+    from src.interfaces.speech import _build_speech_prompt
+
+    prompt = _build_speech_prompt()
+    assert "Cascade Fuel Services" in prompt  # a canonical tenant name
+    assert "CFS" in prompt                     # an alias
+    assert "TankLink" in prompt                # domain jargon
+
+
+@pytest.mark.parametrize(
+    "text, count",
+    [
+        ("One sentence only.", 1),
+        ("First part. Second part.", 2),
+        ("A question? An exclamation! A statement.", 3),
+    ],
+)
+def test_tts_splits_answers_into_sentences(text, count):
+    """Streaming TTS synthesises one sentence at a time so the first is heard
+    without waiting for the whole answer."""
+    from src.interfaces.speech import _SENTENCE_SPLIT
+
+    parts = [p for p in _SENTENCE_SPLIT.split(text) if p.strip()]
+    assert len(parts) == count
+
+
+@pytest.mark.parametrize(
+    "heard, expected",
     [("Platform.", "Platform"), ("Quit.", "Quit"), ("Scope,", "Scope")],
 )
 def test_trailing_punctuation_is_dropped_from_commands(heard, expected):

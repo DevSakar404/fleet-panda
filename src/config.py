@@ -307,6 +307,27 @@ STT_MODEL: Final[str] = "whisper-1"
 TTS_MODEL: Final[str] = "tts-1"        # `tts-1-hd` is slower for no gain over a laptop speaker
 TTS_VOICE: Final[str] = "nova"
 
+# A touch above 1.0. Shaves ~7% (1 - 1/1.08) off listening time and sounds more
+# responsive in a live demo without slurring. tts-1 accepts 0.25-4.0; 1.08 is
+# barely perceptible as "faster" and only reads as "less sluggish". Raise toward
+# 1.15 for ~13% if it still sounds clean on the demo hardware.
+TTS_SPEED: Final[float] = 1.08
+
+# macOS `say` is the offline fallback when OPENAI_API_KEY is absent or the TTS call
+# fails (rate limit, quota). `say` takes words-per-minute, not a multiplier, so its
+# default (~175) is scaled by TTS_SPEED to keep the two paths sounding alike.
+SAY_BASE_WPM: Final[int] = 175
+
+# Fed to Whisper as `initial_prompt` to prime its decoder toward our vocabulary
+# before any regex repair runs. Tenant names and aliases are added at runtime from
+# the data files; these are the industry/product terms that are not tenant names.
+# Kept short -- Whisper only honours the last ~224 tokens of the prompt.
+SPEECH_PROMPT_JARGON: Final[tuple[str, ...]] = (
+    "FleetPanda", "dispatch", "propane", "diesel", "gasoline", "gallons",
+    "delivery orders", "emergency order", "fill rate", "tank monitor", "TankLink",
+    "maintenance", "escalation", "triage", "tenant", "CARR",
+)
+
 # Pinned rather than auto-detected. A two-second clip of a company name gives the
 # language detector very little, and it occasionally reads a short English
 # utterance as another language -- which turns a tenant name into nonsense before

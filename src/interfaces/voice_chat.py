@@ -50,6 +50,25 @@ _SPELLED_OUT = re.compile(
     r"\b(?:[A-Za-z] ){%d,}[A-Za-z]\b" % (config.SPOKEN_ACRONYM_MIN_LETTERS - 1)
 )
 
+# A comma sitting between two digits, which speech-to-text inserts into any number
+# four digits or longer: "ticket 1083" comes back as "ticket 1,083" and the ticket
+# parser's \d+ then reads "1" and "083" as two tokens. Stripped so the id is whole.
+_DIGIT_GROUPING = re.compile(r"(?<=\d),(?=\d)")
+
+# Number words in the tenant range, spoken rather than typed: "for tenant three" is
+# transcribed as words, but "tenant 3" is what the SQL prompt and the router expect.
+# Only the small tenant range (1-12) is dictated this way -- ticket ids are four
+# digits and arrive as digits -- so mapping stops at twelve.
+_SPOKEN_NUMBERS = {
+    "zero": "0", "one": "1", "two": "2", "three": "3", "four": "4", "five": "5",
+    "six": "6", "seven": "7", "eight": "8", "nine": "9", "ten": "10",
+    "eleven": "11", "twelve": "12",
+}
+# Only after "tenant", so an ordinary "three" in prose is left alone.
+_TENANT_NUMBER_WORD = re.compile(
+    r"\b(tenant)\s+(" + "|".join(_SPOKEN_NUMBERS) + r")\b", re.IGNORECASE
+)
+
 # ISO dates, which every reason string and the date anchor carry.
 _ISO_DATE = re.compile(r"\b(\d{4})-(\d{2})-(\d{2})\b")
 _MONTHS = ("January", "February", "March", "April", "May", "June",
@@ -92,10 +111,20 @@ def normalize_transcript(text: str) -> str:
     Trailing sentence punctuation is dropped because Whisper punctuates commands.
     "Platform." is not the `platform` command, and "quit." does not exit.
 
-    Deliberately conservative: it collapses runs of three or more letters. Two
-    would fire on ordinary speech, and every alias in the table is three or more.
+    Two number repairs run first: grouping commas are stripped from ids
+    ("1,083" -> "1083") so the ticket parser sees a whole number, and a spoken
+    tenant number is turned into a digit ("tenant three" -> "tenant 3") so it
+    matches what the SQL prompt and router expect. Both are narrow on purpose --
+    only digit-adjacent commas, only number words right after "tenant".
+
+    Deliberately conservative on letters too: it collapses runs of three or more.
+    Two would fire on ordinary speech, and every alias in the table is three or more.
     """
-    collapsed = _SPELLED_OUT.sub(lambda m: m.group(0).replace(" ", ""), text.strip())
+    cleaned = _DIGIT_GROUPING.sub("", text.strip())
+    cleaned = _TENANT_NUMBER_WORD.sub(
+        lambda m: f"{m.group(1)} {_SPOKEN_NUMBERS[m.group(2).lower()]}", cleaned
+    )
+    collapsed = _SPELLED_OUT.sub(lambda m: m.group(0).replace(" ", ""), cleaned)
     # Only strip trailing punctuation. A question mark mid-string is the model's
     # business, and the router's own heuristics read a trailing '?' as a question
     # -- so it is kept and only '.'/',' are removed.
@@ -152,6 +181,21 @@ def _spoken_brief(response: RouterResponse) -> str:
     return " ".join(parts)
 
 
+def _listen(speech: SpeechClient, conversation: Conversation) -> str:
+    """Get the user's next turn -- spoken online, typed offline -- and repair it.
+
+    Offline mode has no speech-to-text, so the turn is typed. Online it is the
+    push-to-talk recording sent through Whisper. Both paths end in
+    `normalize_transcript`, so nothing downstream can tell how the words arrived.
+    """
+    label = _prompt_label(conversation.context)
+    if speech.offline:
+        return normalize_transcript(input(f"[{label}] type your turn > "))
+    input(f"[{label}] press Enter to speak > ")
+    wav = record_until_enter()
+    return normalize_transcript(speech.transcribe(wav))
+
+
 def main() -> None:
     """Run the voice loop. Push to talk, listen, speak, repeat."""
     _load_env()
@@ -167,10 +211,12 @@ def main() -> None:
     conversation = Conversation(Router(llm=llm))
 
     print(BANNER)
+    if speech.offline:
+        print("! No OPENAI_API_KEY -- offline mode: type each turn, the agent "
+              "replies aloud via macOS `say`. (No offline speech-to-text.)\n")
     while not conversation.finished:
         try:
-            input(f"[{_prompt_label(conversation.context)}] press Enter to speak > ")
-            wav = record_until_enter()
+            heard = _listen(speech, conversation)
         except (EOFError, KeyboardInterrupt):
             print()
             return
@@ -178,7 +224,6 @@ def main() -> None:
             print(f"! {exc}\n")
             return
 
-        heard = normalize_transcript(speech.transcribe(wav))
         if not heard:
             # Silence, or nothing intelligible. Say so out loud rather than only
             # printing it -- the user is looking at the microphone, not the
