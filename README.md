@@ -140,7 +140,10 @@ This documentation is modular (hub-and-spoke, following the
 | **README.md** (this file) | — | Summary, setup, how to run, the map below |
 | [docs/architecture_decisions.md](docs/architecture_decisions.md) | Explanation | The *why*. Why AST parsing (`sqlglot`) enforces multi-tenant SQL isolation; why the triage context pipeline is a structured join and deterministic score rather than RAG; the trade-offs behind each. |
 | [docs/specs/tenant_isolation_spec.md](docs/specs/tenant_isolation_spec.md) | Reference / build guide | The security design: the `TenantContext` authority object, how the tenant is established and propagated, the three enforcement layers, and how the same guarantee maps onto a FastAPI service (dependency-injected tenant, no caller-supplied `tenant_id`). |
+| [docs/specs/sql_agent_spec.md](docs/specs/sql_agent_spec.md) | Reference | The SQL dispatch agent: 2-call architecture (generation vs synthesis), schema card introspector, two-phase cross-tenant authority check, prompt caching, date anchor (`2026-05-29`), and retry lifecycle. |
 | [docs/specs/ticket_triage_agent_spec.md](docs/specs/ticket_triage_agent_spec.md) | Reference | The triage agent: pipeline stages, the five sources, KB retrieval scoring, the escalation rubric (weights and thresholds), prompt structure, customer-profile ("CRM") source, and evaluation criteria. |
+| [docs/specs/entity_resolution_and_routing_spec.md](docs/specs/entity_resolution_and_routing_spec.md) | Reference | The entity resolution & routing pipeline: 5-stage cascade, RapidFuzz scoring, pending tenant confirmation security gate, and heuristic intent classification. |
+| [docs/specs/voice_interface_spec.md](docs/specs/voice_interface_spec.md) | Reference | The voice transport pipeline: Push-to-talk recording, Whisper STT, `speakable()` sanitization rules (date rewrite and brief condensation), and acoustic confirmation safety. |
 | [docs/handoff.md](docs/handoff.md) | Explanation / status | What is complete, what is pending, and the known edge cases and limitations. |
 
 ### Supporting deliverables (assignment context, retained)

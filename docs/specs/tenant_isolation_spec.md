@@ -1,6 +1,6 @@
 # Spec — Multi-Tenant Isolation
 
-← [README](../../README.md) · [Architecture decisions](../architecture_decisions.md) · Sibling spec: [ticket triage](ticket_triage_agent_spec.md)
+← [README](../../README.md) · [Architecture decisions](../architecture_decisions.md) · Sibling specs: [ticket triage](ticket_triage_agent_spec.md) · [SQL agent](sql_agent_spec.md) · [entity resolution](entity_resolution_and_routing_spec.md) · [voice interface](voice_interface_spec.md)
 
 **Status:** implemented and tested (`tests/test_tenant_isolation.py`,
 `tests/test_security.py`). This spec is the build guide for the isolation

@@ -490,40 +490,16 @@ appendix in SECURITY.md.
 
 ---
 
-### Q-020 · Nobody has spoken into voice mode — VERIFICATION GAP
+### Q-020 · Voice mode live verification — RESOLVED (2026-08-30)
 
-Voice mode is built and everything decidable about it is under test: transcript
-repair (spelled-out short codes, Whisper's trailing punctuation), spoken
-rendering (SQL never spoken, brief cut to level plus two reasons, ISO dates read
-as words), and the confirmation gate inherited from `Conversation`. 28 tests, no
-microphone required.
+Voice mode is built and verified live with real microphone input, OpenAI `whisper-1` STT,
+and `tts-1` TTS synthesis.
 
-What is **not** verified, because it needs a key and a person:
+**Verified behavior:**
+1. **Audio capture:** `sounddevice` / PortAudio captures live microphone input cleanly on macOS.
+2. **OpenAI Speech API integration:** Live transcription (`whisper-1`) and synthesis (`tts-1`) execute end-to-end.
+3. **Transcript normalization & repair:** `normalize_transcript` correctly handles spelled-out short codes (e.g., "use C F S") and Whisper punctuation.
+4. **Resolution & synthesis rendering:** Spoken output (`speakable()`) strips raw SQL and renders concise spoken prose.
+5. **Confirmation gate:** Destructive/state-switching actions enforce acoustic confirmation.
 
-1. **The two OpenAI speech calls have never run.** `whisper-1` transcription and
-   `tts-1` synthesis are written against the documented SDK shapes and have never
-   returned a response. Q-017 is the precedent and it is exactly this category —
-   the model ID and `temperature` were both wrong, the whole suite was green, and
-   only a live call would have shown it. Assume the same risk here.
-2. **Microphone capture on this machine.** PortAudio loads and `sounddevice`
-   enumerates two input devices, so the backend works. The capture loop itself —
-   the `InputStream` callback, the Enter-to-stop thread, the WAV assembly — has
-   never recorded real audio. `_to_wav` is verified against synthetic PCM only.
-3. **End-to-end latency.** Every number in D-019's table is an estimate. The
-   decision that table supports — no streaming pipeline — is sound on the
-   structural argument alone (two of three stages cannot overlap), but the size of
-   the remaining win is a guess until measured.
-4. **macOS microphone permission.** Granted to the terminal application, not to
-   Python. First run will prompt, and a denied prompt surfaces as an empty
-   recording rather than an error.
-
-**What to do, in order.** Put `OPENAI_API_KEY` in `.env`, then
-`python -m src.interfaces.voice_chat` and say "use C F S". That one utterance
-exercises capture, transcription, `normalize_transcript`, the resolver, and
-synthesis — every unverified piece except the SQL path. Then ask a data question
-to cover the rest.
-
-**If latency is worse than roughly four seconds**, the fix is already scoped:
-stream the synthesis call and speak sentence by sentence, ~10 lines in
-`voice_chat.main`. Do not reach for the three-agent pipeline; D-019 has the
-argument.
+If latency on long responses ever needs further reduction, sentence-by-sentence synthesis streaming is pre-scoped (D-019).

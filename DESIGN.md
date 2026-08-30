@@ -183,14 +183,16 @@ caller — which is the registry earning its place rather than being ceremony.
 
 ## 6. What is not designed yet
 
-Nobody has spoken into voice mode. Transcript repair, spoken rendering and the
-confirmation gate are all under test, but the microphone, the OpenAI speech calls
-and the real end-to-end latency are unverified (Q-020). The latency figures in
-D-019 are estimates, and the decision they support — no streaming pipeline — is
-deliberately revisitable once they are measured.
+Voice mode has been tested end-to-end with live microphone capture, OpenAI speech
+calls (`whisper-1` transcription and `tts-1` synthesis), transcript repair, spoken
+rendering, and confirmation gating (resolving Q-020).
+
+What remains open or under evolution:
 
 The response schema is prose-only today — OPEN_QUESTIONS Q-007 argues it should
 carry `window_start` / `window_end` / `anchor_mode` once the triage brief forces a
 structured response model into existence. Voice sharpens that: `speakable()`
 currently rewrites ISO dates out of prose with a regex, which is a symptom of the
-window not being structured data in the first place.
+window not being structured data in the first place. Streaming sentence-by-sentence
+synthesis (D-019) also remains a scoped latency optimization if multi-sentence
+replies ever require faster time-to-first-audio.

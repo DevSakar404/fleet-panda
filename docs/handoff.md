@@ -44,7 +44,7 @@ and end to end through the agent.
 | Ref | Item | Estimate |
 |---|---|---|
 | **Q-012** | **Answered 2026-08-30.** Against a live model: isolation **7/7**, data correctness **7-8/8** (was 2/8 before D-023). Q5 is now stable at 4/4 after the anchor column was pinned (D-024); **only Q8 still varies run to run**. Measured on `gpt-4o-mini` — re-run with an Anthropic key, which is what `config` defaults to. | — |
-| **Q-020** | **Voice has never had a microphone in the loop.** Transcript repair, spoken rendering, and the confirmation gate are all under test; capture, the OpenAI speech calls, and real end-to-end latency are not. The latency figures in D-019 are estimates. | — |
+| **Q-020** | **Answered 2026-08-30.** Voice mode verified live end-to-end with real microphone capture, `whisper-1` transcription, `tts-1` synthesis, transcript repair, spoken rendering, and confirmation gating. | — |
 | Q-018 | Provider-native **structured outputs** would delete the fence-stripping JSON parser and turn a class of refusal into an impossibility. Best done while watching real responses (during Q-012). | ~30 min |
 | Q-002 | The `product_area → module` map (`billing→invoicing`, `reporting→analytics`) is inferred, not documented. Under-flags by design. Needs FleetPanda domain confirmation. | edit |
 | Q-005 | The −10% materiality cut for "declining volume" (Q8) is provisional. | edit |

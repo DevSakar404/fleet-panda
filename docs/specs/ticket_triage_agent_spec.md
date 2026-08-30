@@ -1,6 +1,6 @@
 # Spec — Ticket Triage Agent
 
-← [README](../../README.md) · [Architecture decisions](../architecture_decisions.md) · Sibling spec: [tenant isolation](tenant_isolation_spec.md)
+← [README](../../README.md) · [Architecture decisions](../architecture_decisions.md) · Sibling specs: [tenant isolation](tenant_isolation_spec.md) · [SQL agent](sql_agent_spec.md) · [entity resolution](entity_resolution_and_routing_spec.md) · [voice interface](voice_interface_spec.md)
 
 **Status:** implemented and tested (`tests/test_triage.py`,
 `tests/test_escalation.py`, `tests/test_ticket_parser.py`). Triage is invoked
