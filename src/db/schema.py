@@ -94,14 +94,17 @@ class SchemaCard:
             # delivery_date and got 18 where the correct answer is 17. Both
             # columns are always populated, so nothing in the data hints at which
             # one a question means -- only the wording does.
-            "- `order_date` is when an order was PLACED; `delivery_date` is when "
-            "it was fulfilled, 0-3 days later (1.5 on average). Both are always "
-            "populated, including for cancelled and pending orders, so picking "
-            "the wrong one shifts a relative window by a day or two and returns a "
-            "plausible wrong number with no error. A question about ORDERS "
-            "('how many emergency orders...') filters `order_date`. A question "
-            "about DELIVERIES ('deliveries completed...') filters "
-            "`delivery_date`.",
+            "- `order_date` is when an order was PLACED. `delivery_date` is the "
+            "SCHEDULED delivery, 0-3 days later (1.5 on average) -- it is filled "
+            "in on every row including the 948 cancelled ones, which were never "
+            "delivered at all. It is only evidence of a real delivery when "
+            "`status = 'completed'`, so counting deliveries needs that filter as "
+            "well as the date. A question about ORDERS ('how many emergency "
+            "orders...') filters `order_date`; a question about DELIVERIES "
+            "('deliveries completed...') filters `delivery_date` AND "
+            "`status = 'completed'`. Picking the wrong column shifts a relative "
+            "window by a day or two and returns a plausible wrong number with no "
+            "error.",
             # Added after the first live run: the model answered Q3 by summing
             # this column, which ranks drivers correctly but reports six times the
             # real delivery count.
