@@ -127,6 +127,16 @@ class SchemaCard:
                 f"`date((SELECT MAX({config.DATE_ANCHOR_COLUMN}) FROM "
                 f"{config.DATE_ANCHOR_TABLE}), '-7 day')` rather than "
                 "`date('now')`, which returns zero rows against this dataset.",
+                # The anchor column is pinned, not merely suggested. A live run
+                # anchored on MAX(order_date) instead, which is a day earlier than
+                # MAX(delivery_date) for two of the twelve tenants -- so the window
+                # gained a day and the answer moved. Both columns look equally
+                # reasonable to a reader of the schema alone.
+                f"- ALWAYS anchor on `MAX({config.DATE_ANCHOR_COLUMN})`, never on "
+                f"`MAX(order_date)`. They differ: `order_date` runs a day behind "
+                f"`{config.DATE_ANCHOR_COLUMN}` for some tenants, which silently "
+                "widens a relative window by a day. Use `order_date` for FILTERING "
+                "orders, but never as the anchor a window is measured from.",
             ])
         return "\n".join(lines)
 

@@ -127,9 +127,9 @@ D-012 because it is the argument for the working value.
 Eighteen questions below. In priority order:
 
 - **Q-012 — ANSWERED 2026-08-30.** Isolation scored 7/7 against a real model;
-  data correctness went 2/8 -> 6-8/8 after D-023. Q5 and Q8 remain run-to-run
-  unstable. Re-run with an **Anthropic** key before submitting — this was measured
-  on `gpt-4o-mini`.
+  data correctness went 2/8 -> **7-8/8** after D-023 and D-024. Q5 is now stable
+  (4/4); only Q8 still varies. Re-run with an **Anthropic** key before submitting —
+  this was measured on `gpt-4o-mini`.
 - **Q-018 — structured outputs** would delete the fence-stripping JSON parser
   entirely and turn a class of refusal into an impossibility. ~30 minutes, best done
   while watching real responses.

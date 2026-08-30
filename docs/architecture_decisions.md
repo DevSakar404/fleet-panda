@@ -5,7 +5,7 @@
 This is the **narrative digest** of the design. It explains the reasoning and the
 trade-offs behind the load-bearing choices. The dated, per-decision journal —
 context, options, chosen option, trade-off accepted, and the file it lives in —
-is [`DECISIONS.md`](../DECISIONS.md) (entries D-001 … D-021). Decision numbers
+is [`DECISIONS.md`](../DECISIONS.md) (entries D-001 … D-024). Decision numbers
 below link to it.
 
 ---
@@ -173,6 +173,16 @@ returns zero rows and reports every tenant as having stopped delivering.
 
 **Trade-off accepted:** a reader must know which clock a given number is on. The
 mitigation is that the anchor is always stated, never implied.
+
+There is a third subtlety, found by running against a real model (D-024). The
+guard injects its tenant predicate into *every* SELECT scope, including the
+subquery that computes the anchor — so inside a tenant-scoped session the anchor
+becomes that tenant's newest row rather than the platform's. For ten of twelve
+tenants these are the same date; for tenants 4 and 11 they differ by a day on
+`order_date` (DQ-10), which widens a 30-day window by one day. The fix is *not* to
+exempt anchor subqueries from injection: a guard with a carve-out for subqueries
+that "look like anchors" needs a heuristic deciding where isolation does not
+apply, which is the first line of the next incident report.
 
 ---
 

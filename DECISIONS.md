@@ -542,6 +542,40 @@ valid SQL, no error, and an empty answer.
 
 ---
 
+**DQ-10 · `MAX(order_date)` trails `MAX(delivery_date)` for two tenants.**
+*Found:* while diagnosing a live-model run of graded Q5 (D-024).
+
+The dataset's newest `delivery_date` is 2026-05-29 for every one of the twelve
+tenants. Its newest `order_date` is 2026-05-29 for ten of them and **2026-05-28 for
+tenants 4 and 11**. Nothing in the schema hints at the difference, and the two
+columns are equally plausible choices for "the newest date in the data".
+
+That one-day gap is enough to change an answer. Anchoring a 30-day window on
+`MAX(order_date)` inside a session scoped to tenant 4 widens the window by a day
+and returns 18 emergency orders where the platform-anchored query returns 17.
+
+*Production:* a real dataset has this everywhere and worse -- tenants onboard on
+different days, go quiet at different times, and stop reporting without closing
+their orders. The anchor should not be derived from the data at query time at all;
+it should be an explicit parameter the system sets and states in its answer, so
+that "the 30 days to 2026-05-29" is a claim the reader can check rather than an
+artefact of which column the query happened to use. See D-024 option C.
+
+**DQ-11 · `delivery_date` is a schedule, not a fulfilment record.**
+*Found:* by reading sample rows, after the schema card had already claimed otherwise.
+
+`delivery_date` is populated on all 9,769 rows, including the 948 with
+`status = 'cancelled'` -- orders that were delivered to nobody, and whose
+`gallons_delivered` is NULL. It is never earlier than `order_date`, so it reads as
+a planned date assigned when the order is taken. Only `status = 'completed'` makes
+it evidence that a delivery happened.
+
+*Production:* two columns, not one -- `scheduled_delivery_date` and
+`actual_delivery_date` -- or the count of "deliveries last week" silently includes
+cancellations for anyone who forgets the status filter. This is the same trap as
+`gallons_delivered` being NULL outside completed orders (DQ-4), reached from a
+different direction.
+
 ## Cost estimate
 
 **Workload:** 50 ticket triages/day and 100 dispatch questions/day, as specified.
@@ -1083,3 +1117,51 @@ itself as never raising for bad SQL. A stack trace reached the caller. Execution
 failures are now `QueryExecutionError`, fed back into the existing retry as the
 correction (SQLite's own message is a better one than any we could infer) and
 becoming a refusal if the retry also fails. `tests/test_sql_agent.py` pins both.
+
+### D-024 · The guard makes the date anchor tenant-local, and that is left alone
+**Date:** 2026-08-30
+**Context:** A live run of graded Q5 ("emergency orders for tenant 4 in the past 30
+days") returned 18 where the reference returns 17. The model's SQL was not wrong.
+It anchored the window on `(SELECT MAX(order_date) FROM delivery_orders)`, which is
+a reasonable reading of the schema card. The guard then did its job and injected
+`tenant_id = 4` into that subquery as well, because it injects into every SELECT
+scope -- the same traversal that makes correlated subqueries safe. The anchor
+stopped being "the newest date in the dataset" and became "the newest date for
+tenant 4", which is 2026-05-28 rather than 2026-05-29. One day earlier anchor, one
+extra day of window, one extra order.
+
+**It is systemic, not a Q5 quirk.** Two of twelve tenants (4 and 11) have a
+`MAX(order_date)` a day behind the platform's. Any scoped relative-window question
+about them shifts. The reference SQL escapes only by luck: it anchors on
+`MAX(delivery_date)`, and those two tenants happen to match the global maximum on
+that column.
+
+**Options considered:**
+A — exempt anchor subqueries from tenant injection.
+B — pin the anchor column in the schema card and accept the residual drift.
+C — resolve the anchor in Python and pass it to the prompt as a literal date.
+**Chosen:** B, plus documenting the drift rather than engineering around it.
+
+A is the tempting one and is the wrong one. The guard's value is that it has no
+exceptions -- "every tenant-scoped table reference in every SELECT scope carries a
+predicate" is a sentence we can verify precisely because there is no clause after
+it. A carve-out for subqueries that "look like anchors" needs a heuristic for
+recognising one, and a heuristic that decides where isolation does not apply is
+the first line of the next incident report. The whole D-004 argument is that the
+parser is the layer most likely to have a hole in it; this would be cutting one on
+purpose.
+
+C is defensible and stays open. It removes the subquery entirely, so there is
+nothing for the guard to rewrite, and it makes the anchor a fact the system states
+rather than one the model derives. It was not chosen now because it moves a
+date into generated SQL as a literal, which is a different fragility -- the query
+stops being re-runnable against refreshed data -- and because the drift it fixes
+affects two tenants by one day.
+
+**Trade-off accepted:** in a tenant-scoped session, "the past 30 days" is measured
+from that tenant's most recent activity, not the platform's. For ten of twelve
+tenants these coincide. For tenants 4 and 11 the scoped answer is one day wider
+than the platform answer, and neither is wrong -- they answer slightly different
+questions. The system does not currently say which one it used.
+**Where it lives:** `src/db/guard.py:_inject_tenant_predicates` (the behaviour),
+`src/db/schema.py:SchemaCard.render` (the pinned anchor column).

@@ -43,7 +43,7 @@ and end to end through the agent.
 
 | Ref | Item | Estimate |
 |---|---|---|
-| **Q-012** | **Answered 2026-08-30.** Against a live model: isolation **7/7**, data correctness **6-8/8** (was 2/8 before D-023). **Q5 and Q8 vary run to run.** Measured on `gpt-4o-mini` — re-run with an Anthropic key, which is what `config` defaults to. | — |
+| **Q-012** | **Answered 2026-08-30.** Against a live model: isolation **7/7**, data correctness **7-8/8** (was 2/8 before D-023). Q5 is now stable at 4/4 after the anchor column was pinned (D-024); **only Q8 still varies run to run**. Measured on `gpt-4o-mini` — re-run with an Anthropic key, which is what `config` defaults to. | — |
 | **Q-020** | **Voice has never had a microphone in the loop.** Transcript repair, spoken rendering, and the confirmation gate are all under test; capture, the OpenAI speech calls, and real end-to-end latency are not. The latency figures in D-019 are estimates. | — |
 | Q-018 | Provider-native **structured outputs** would delete the fence-stripping JSON parser and turn a class of refusal into an impossibility. Best done while watching real responses (during Q-012). | ~30 min |
 | Q-002 | The `product_area → module` map (`billing→invoicing`, `reporting→analytics`) is inferred, not documented. Under-flags by design. Needs FleetPanda domain confirmation. | edit |
@@ -59,6 +59,12 @@ and end to end through the agent.
   windows on `MAX(delivery_date)` (data ends 2026-05-29); escalation contract
   proximity runs on the real calendar (D-001, D-011). A reader must track which
   clock a number is on — the agent always states the data anchor.
+- **In a scoped session the anchor is tenant-local, not platform-wide** (D-024).
+  The guard injects its predicate into the anchor subquery too, so "the past 30
+  days" is measured from *that tenant's* newest row. Ten of twelve tenants match the
+  platform anchor; tenants 4 and 11 trail it by a day on `order_date` (DQ-10), so a
+  scoped window over them is a day wider. Neither reading is wrong and the system
+  does not currently say which it used.
 - **Layer 3 is a detector, not a guarantee.** The post-execution row assertion
   can only inspect a `tenant_id` it can see; `SELECT COUNT(*)` projects none.
   Pinned by `test_the_row_assertion_is_a_detector_not_a_guarantee`; Q-010 argues
