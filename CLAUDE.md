@@ -245,6 +245,12 @@ entries that explain why each is shaped as it is.
 - **Never modify anything in `data/`.**
 - Run the test suite after each step. Leave the repo green (with the SQL
   question tests skipped, which is expected at this stage).
+- **When you change a feature's behavior, update its spec in `docs/specs/` in
+  the same change** — the spec is a deliverable, not a snapshot. The map from
+  code to spec is in section 10; if an edit crosses a feature boundary, update
+  every spec it touches, and log a genuinely contested choice in `DECISIONS.md`.
+  A spec that disagrees with the code is worse than no spec: the live session
+  reads from it.
 - If a design choice has a real trade-off and you cannot resolve it from this
   file, **pick the more conservative option, implement it, and log the question
   in `OPEN_QUESTIONS.md`** with your reasoning and the alternative. Do not block.
@@ -281,3 +287,24 @@ That distinction lives in `TenantContext` and must be explicit, not implicit.
 and Q8 "list tenants with declining volume" range over every tenant by
 construction -- answering them scoped returns one tenant's rows presented as a
 platform-wide ranking. See OPEN_QUESTIONS.md Q-001.)
+
+---
+
+## 10. Feature specs — the code-to-spec map
+
+Each feature has a living spec under `docs/specs/`. These are what the live
+session reads from and points at, so they must track the code (section 8). When
+you touch the code in the left column, update the spec in the right column in the
+same change. `DESIGN.md` is the system-wide overview; `docs/architecture_decisions.md`
+and `DECISIONS.md` carry the *why* behind contested choices.
+
+| Feature / code | Spec to keep in sync |
+|---|---|
+| `src/db/{guard,executor,connection,schema}.py` (tenant isolation, three layers) | `docs/specs/tenant_isolation_spec.md` |
+| `src/agent/sql_agent.py`, SQL generation + schema card | `docs/specs/sql_agent_spec.md` |
+| `src/agent/{triage_agent,escalation,ticket_parser}.py` (brief fan-in, scoring) | `docs/specs/ticket_triage_agent_spec.md` |
+| `src/data/resolver.py`, `src/agent/{router,session}.py` (resolution, routing, scope) | `docs/specs/entity_resolution_and_routing_spec.md` |
+| `src/interfaces/{voice_chat,speech}.py`, `src/agent/conversation.py` (voice transport) | `docs/specs/voice_interface_spec.md` |
+
+Rule of thumb: if the change would make a sentence in one of these specs false,
+the spec edit is part of the change, not a follow-up.
