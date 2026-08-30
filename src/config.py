@@ -52,7 +52,7 @@ LLM_EFFORT_SYNTHESIS: Final[str] = "low"
 # 88 sits above the highest observed *wrong* pairing in the alias index and below
 # the lowest observed right one: 'cascade fuel svcs' vs 'cascade fuel services llc'
 # scores 89, while the nearest unrelated pair ('gl fuel' vs that same string)
-# scores 73. See RECON.md section 6.
+# scores 73. See recon.md section 6.
 FUZZY_MATCH_THRESHOLD: Final[float] = 88.0
 
 # How many ranked candidates to hand back when resolution fails. Voice mode reads
@@ -96,7 +96,7 @@ MAX_RESULT_ROWS: Final[int] = 200
 # Wall-clock budget for a single query, enforced via sqlite3 progress handler.
 QUERY_TIMEOUT_SECONDS: Final[float] = 5.0
 
-# --- Date anchoring (DECISIONS.md D-001) -------------------------------------
+# --- Date anchoring (decisions-log.md D-001) -------------------------------------
 
 # The dataset ends 2026-05-29. Anchoring relative windows on date('now') returns
 # zero rows for questions 1, 2, 5 and 8. Anchoring on the newest row in the data
@@ -114,22 +114,22 @@ DATE_ANCHOR_TABLE: Final[str] = "delivery_orders"
 #
 # NOTE: CLAUDE.md section 9 lists only {1, 7}. Q2 ('which tenant delivered the
 # most') and Q8 ('list tenants with declining volume') are equally cross-tenant.
-# See OPEN_QUESTIONS.md Q-001 -- the charter was left unedited, the correct set is
+# See open-questions.md Q-001 -- the charter was left unedited, the correct set is
 # implemented here.
 CROSS_TENANT_QUESTIONS: Final[frozenset[int]] = frozenset({1, 2, 7, 8})
 
 # Below this decline a tenant is noise, not a trend. Anchored on the data, seven
 # of twelve tenants are technically negative but t1 is at -1.5%. See
-# OPEN_QUESTIONS.md Q-005.
+# open-questions.md Q-005.
 DECLINE_THRESHOLD_PCT: Final[float] = -10.0
 
-# --- Ticket triage domain knowledge (DECISIONS.md D-002) ---------------------
+# --- Ticket triage domain knowledge (decisions-log.md D-002) ---------------------
 
 # Tickets describe themselves with `product_area`; customers are entitled to
 # `modules_active`. The two vocabularies share only dispatch, pricing and
 # tank_monitor. Mapping them is what turns a 58/85 false-positive rate into 26
 # genuine entitlement gaps. billing->invoicing and reporting->analytics are
-# inferred, not documented -- see OPEN_QUESTIONS.md Q-002.
+# inferred, not documented -- see open-questions.md Q-002.
 AREA_TO_MODULE: Final[dict[str, str]] = {
     "dispatch": "dispatch",
     "pricing": "pricing",
@@ -154,7 +154,7 @@ HEALTH_SCORE_AT_RISK: Final[int] = 60
 CONTRACT_RENEWAL_WINDOW_DAYS: Final[int] = 90
 
 # Two tickets with subjects this similar, from the same tenant, are treated as
-# duplicate candidates. 85 comes from RECON.md section 9: at that cut the 14 pairs
+# duplicate candidates. 85 comes from recon.md section 9: at that cut the 14 pairs
 # found are all genuine refilings, and nothing unrelated is caught.
 DUPLICATE_SUBJECT_THRESHOLD: Final[float] = 85.0
 
@@ -173,7 +173,7 @@ SQL_MAX_ATTEMPTS: Final[int] = 2
 SYNTHESIS_ROW_SAMPLE: Final[int] = 25
 
 
-# --- Escalation scoring weights (DECISIONS.md D-010) -------------------------
+# --- Escalation scoring weights (decisions-log.md D-010) -------------------------
 #
 # Points, not probabilities. The scale is arbitrary but the ORDER is not, and the
 # order is the argument: an expired contract on a healthy account outranks a

@@ -1,4 +1,4 @@
-# SECURITY.md — code review of the text-to-SQL endpoint
+# Security review — the text-to-SQL endpoint
 
 Three vulnerabilities, each with the attack that exploits it and the fix. All three
 are multi-tenant or input-handling failures, and they compound: V3 is what makes
@@ -103,7 +103,7 @@ bodies, each of which is its own scope:
 verdict = guard.check(sql, TenantContext.for_tenant(tenant_id))
 ```
 
-Implemented at [`src/db/guard.py`](src/db/guard.py) (`_inject_tenant_predicates`).
+Implemented at [`src/db/guard.py`](../../src/db/guard.py) (`_inject_tenant_predicates`).
 Two properties are worth calling out:
 
 - A caller-supplied `WHERE tenant_id = 7` is **ANDed, not replaced**, so a
@@ -180,7 +180,7 @@ Three independent layers, each of which holds if the others fail:
    connection.execute("PRAGMA query_only = ON;")
    ```
 
-   [`src/db/connection.py`](src/db/connection.py).
+   [`src/db/connection.py`](../../src/db/connection.py).
 
 2. **Validate the AST before execution.** Parse with `sqlglot`; reject anything
    that is not exactly one `SELECT`; reject `INSERT`/`UPDATE`/`DELETE`/`DROP`/
@@ -190,14 +190,14 @@ Three independent layers, each of which holds if the others fail:
    from schema introspection; reject cross-database references; force a `LIMIT`.
    Use `sqlglot.parse()` and **count the statements** — `parse_one()` silently
    keeps only the first, so a multi-statement payload would validate as a clean
-   `SELECT`. [`src/db/guard.py`](src/db/guard.py).
+   `SELECT`. [`src/db/guard.py`](../../src/db/guard.py).
 
 3. **Assert on the rows that came back.** After execution, check that no returned
    row carries a foreign `tenant_id`. This is the only layer that can catch a bug
    in layer 2 — and it earned its place: a `sqlglot` minor-version rename of the
    `Select` node's `from` argument to `from_` silently disabled predicate injection
    during this build, producing syntactically perfect, entirely unfiltered SQL.
-   [`src/db/executor.py`](src/db/executor.py).
+   [`src/db/executor.py`](../../src/db/executor.py).
 
 Note the honest limit on layer 3: it can only inspect rows it received, so a leak
 whose first 200 rows happen to belong to the bound tenant passes it. It is a smoke
@@ -264,7 +264,7 @@ prompt says the opposite of the vulnerable one:
 
 One predicate, from one place, that we control. A model-written filter would be
 redundant when right and invisible when wrong.
-[`src/llm/prompts.py`](src/llm/prompts.py).
+[`src/llm/prompts.py`](../../src/llm/prompts.py).
 
 **Separate untrusted input from instructions.** Put the question in its own user
 message rather than interpolating it into the system prompt, so instructions and
@@ -342,7 +342,7 @@ Not among the three, but each is a real finding in the same forty lines.
 |---|---|---|
 | `body["question"]` | `KeyError` → unhandled 500 with a stack trace, leaking framework and path details | Pydantic request model; `question` required, typed, length-bounded |
 | No authentication | The endpoint is reachable by anyone who can route to it | Auth dependency; V1's fix presumes one exists |
-| Unbounded result set | `fetchall()` on 9,769 rows today, 75M at the scale in DECISIONS.md — memory exhaustion as a DoS | `LIMIT` forced by the guard, `fetchmany(cap + 1)` in the executor |
+| Unbounded result set | `fetchall()` on 9,769 rows today, 75M at the scale in decisions-log.md — memory exhaustion as a DoS | `LIMIT` forced by the guard, `fetchmany(cap + 1)` in the executor |
 | No query timeout | One expensive cross join holds a worker indefinitely | `sqlite3` progress handler with a wall-clock deadline |
 | `sql` returned to every caller | Free schema reconnaissance, and confirmation of what ran | Return it only to internal principals |
 | `open("SCHEMA.md")` | Unclosed handle, and a path relative to the working directory | Introspect the live schema; it is also more accurate than the file |
@@ -365,14 +365,14 @@ safe".
   dialect divergence — something `sqlglot` parses as one shape and SQLite executes
   as another — would be a real bypass. This is the strongest argument for pushing
   isolation into the database itself (row-level security, per-tenant roles) rather
-  than into application-layer rewriting, which is the direction DECISIONS.md
+  than into application-layer rewriting, which is the direction decisions-log.md
   recommends at scale.
 - **Nothing here rate-limits.** An authenticated caller can still enumerate their
   own tenant's data at whatever speed the LLM budget allows.
 - **Inference is still a leak channel.** Aggregate answers over a tenant's own data
   can disclose information about individual end-customers. Isolation between
   tenants is enforced; privacy *within* a tenant is not addressed at all, and it is
-  where the end-customer agent in DECISIONS.md has to start.
+  where the end-customer agent in decisions-log.md has to start.
 
 
 ---
@@ -432,7 +432,7 @@ rather than by asking for it beforehand.
 The observation still holds for a real deployment. The moment the actor changes —
 an HTTP endpoint, a shared host, a voice line reachable by a tenant's staff or
 their end-customers — self-asserted scope becomes a genuine vulnerability, and the
-end-customer agent in DECISIONS.md is precisely that case. Tracked as
+end-customer agent in decisions-log.md is precisely that case. Tracked as
 OPEN_QUESTIONS **Q-019** with the structural fix (construct `TenantContext` only
 from a verified principal). Not fixed here, because building an auth boundary the
 assignment does not ask for is inventing scope, and a principal model bolted on

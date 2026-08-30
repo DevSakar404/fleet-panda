@@ -1,8 +1,8 @@
 """Entity resolution tests.
 
-Seeded from Step 0 recon (RECON.md section 6) rather than invented: the ambiguous
+Seeded from Step 0 recon (recon.md section 6) rather than invented: the ambiguous
 probes below are the exact strings that made a score-gated resolver return the
-wrong tenant at full confidence, which is what motivated DECISIONS.md D-003.
+wrong tenant at full confidence, which is what motivated decisions-log.md D-003.
 
 The tests are grouped by what they protect:
   - the cascade returns the right id by the cheapest method that can
@@ -76,7 +76,7 @@ def test_exact_matches_do_not_ask_for_confirmation(resolver):
     [
         # token_set_ratio scores each of these 100 against several tenants,
         # because a subset of tokens is a perfect match. A score-gated resolver
-        # returns the first one and leaks. See RECON.md section 6.
+        # returns the first one and leaks. See recon.md section 6.
         ("Fuel", {1, 5, 6}),
         ("Energy", {3, 7, 12}),
         ("propane", {2, 11}),

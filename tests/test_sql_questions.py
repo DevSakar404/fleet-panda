@@ -29,7 +29,7 @@ from tests.conftest import FakeLLM, sql_reply
 
 # Anchored on the data rather than on `date('now')`: the dataset ends 2026-05-29,
 # 91 days before this was written, so `date('now')` returns zero rows for four of
-# these eight questions. See DECISIONS.md D-001.
+# these eight questions. See decisions-log.md D-001.
 ANCHOR = "(SELECT MAX(delivery_date) FROM delivery_orders)"
 
 
@@ -66,7 +66,7 @@ def test_q2_top_diesel_tenant_last_month(run):
     data (2026-04), not a rolling 30 days.
 
     Aggregates delivery_orders alone. Joining tank_readings here would inflate the
-    total 9x (RECON.md section 5).
+    total 9x (recon.md section 5).
     """
     result = run(
         f"SELECT tenant_id, SUM(gallons_delivered) AS gallons FROM delivery_orders "
@@ -162,7 +162,7 @@ def test_q8_tenants_with_declining_volume(run):
 
     Seven of twelve tenants are technically negative; the materiality threshold
     (config.DECLINE_THRESHOLD_PCT, provisionally -10%) is what makes the answer
-    useful rather than exhaustive. See OPEN_QUESTIONS.md Q-005.
+    useful rather than exhaustive. See open-questions.md Q-005.
     """
     result = run(
         f"WITH windows AS ("
@@ -206,7 +206,7 @@ def test_the_date_anchor_matters(run):
 # agent's PLUMBING end to end -- generation is parsed, the guard rewrites it, the
 # executor runs it, the anchor reaches synthesis, cross-tenant questions are
 # refused when scoped. They do NOT assert that a real model writes this SQL; that
-# needs an API key and is tracked as OPEN_QUESTIONS.md Q-012.
+# needs an API key and is tracked as open-questions.md Q-012.
 #
 # When a key is available, the same expectations ARE the acceptance target. Set
 # FLEETPANDA_EVAL_LLM=1 and this file runs against the real model instead, with
@@ -257,7 +257,7 @@ QUESTIONS = {
 }
 
 # The four that range over every tenant by construction. CLAUDE.md section 9
-# lists only {1, 7}; see OPEN_QUESTIONS.md Q-001.
+# lists only {1, 7}; see open-questions.md Q-001.
 CROSS_TENANT = {1, 2, 7, 8}
 
 
@@ -269,7 +269,7 @@ def _agent(number: int, answer_text: str = "Answer."):
     change, which is the point: if a real model writes correct SQL it produces the
     same numbers, so "did it get Q4's status filter right?" is answered by the
     existing test rather than by a separate scoring rubric. Costs ~2 calls per
-    question. Tracked as OPEN_QUESTIONS.md Q-012.
+    question. Tracked as open-questions.md Q-012.
     """
     from src.agent.sql_agent import SqlAgent
 

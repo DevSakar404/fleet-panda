@@ -121,7 +121,7 @@ class Repository:
         because the two fields are different vocabularies -- `integration` and
         `login_access` are gated by no module at all. Mapping first, and treating
         unmapped areas as ungated, brings that to 26 genuine gaps.
-        See DECISIONS.md D-002.
+        See decisions-log.md D-002.
         """
         if ticket.product_area in config.UNGATED_PRODUCT_AREAS:
             return None

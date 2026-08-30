@@ -2,7 +2,7 @@
 
 Driven by `FakeLLM`, so nothing here needs an API key or a network call. What
 these tests do NOT cover is whether a real model writes good SQL -- that is
-unverifiable without a key and is called out in OPEN_QUESTIONS.md Q-012.
+unverifiable without a key and is called out in open-questions.md Q-012.
 """
 
 from __future__ import annotations
@@ -51,7 +51,7 @@ def test_the_synthesis_call_receives_rows_and_the_anchor_not_the_question_alone(
 
 def test_the_answer_carries_a_machine_readable_anchor():
     """Prose alone would leave a consumer parsing English to find out the data is
-    91 days stale. See OPEN_QUESTIONS.md Q-007."""
+    91 days stale. See open-questions.md Q-007."""
     llm = FakeLLM(sql_reply(COUNT_SQL), "415 orders.")
     answer = SqlAgent(llm).answer("how many?", SCOPED)
 

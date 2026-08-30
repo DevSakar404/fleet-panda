@@ -119,7 +119,7 @@ class ResolvedNameSource:
 #
 # Adding a sixth source is: write its loader in loaders.py, then add one line
 # here. No agent code changes. This is the property CLAUDE.md section 3.7 asks for
-# and the one the architecture question in DECISIONS.md will point at.
+# and the one the architecture question in decisions-log.md will point at.
 
 REGISTRY: Final[dict[str, DataSource]] = {
     "tenants": AttributeSource("tenants", loaders.load_tenants),

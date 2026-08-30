@@ -221,7 +221,7 @@ class TenantResolver:
         So the score decides *membership* of the candidate set, and the size of
         that set decides whether we answer. One tenant above the line -> resolved.
         Two or more -> refuse and list them, however high the scores are.
-        See DECISIONS.md D-003 and RECON.md section 6.
+        See decisions-log.md D-003 and recon.md section 6.
         """
         idx = self._index
         matches = process.extract(

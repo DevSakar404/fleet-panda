@@ -1,6 +1,6 @@
 # Spec — Multi-Tenant Isolation
 
-← [README](../../README.md) · [Architecture decisions](../architecture_decisions.md) · Sibling specs: [ticket triage](ticket_triage_agent_spec.md) · [SQL agent](sql_agent_spec.md) · [entity resolution](entity_resolution_and_routing_spec.md) · [voice interface](voice_interface_spec.md)
+← [README](../../README.md) · [Architecture decisions](../explanation/architecture-decisions.md) · Sibling specs: [ticket triage](ticket-triage.md) · [SQL agent](sql-agent.md) · [entity resolution](entity-resolution.md) · [voice interface](voice-interface.md)
 
 **Status:** implemented and tested (`tests/test_tenant_isolation.py`,
 `tests/test_security.py`). This spec is the build guide for the isolation
@@ -301,7 +301,7 @@ triaging a ticket that belongs to another tenant gets the *same* "I can't find
 ticket #N" message as a genuinely missing ticket. Distinguishing them turned the
 tool into an enumeration oracle — ticket ids are sequential four-digit integers,
 so a scoped user could map every id in use across the platform by sorting replies
-into "refused" and "not found" (F3 in [SECURITY.md](../../SECURITY.md)).
+into "refused" and "not found" (F3 in [SECURITY.md](../how-to/security-review.md)).
 
 ---
 
@@ -341,7 +341,7 @@ inexpressible:
 
 **Known ceiling:** layer 3 is a *detector*, not a guarantee — it is pinned by
 `test_the_row_assertion_is_a_detector_not_a_guarantee`.
-[OPEN_QUESTIONS.md](../../OPEN_QUESTIONS.md) Q-010 argues against adding a fourth
+[open-questions.md](../project/open-questions.md) Q-010 argues against adding a fourth
 layer to close the gap.
 
 ---
@@ -357,7 +357,7 @@ layer to close the gap.
 Each layer assumes the others may fail. The `sqlglot`-30 incident is the proof
 that this is not paranoia: layer 2 failed completely and silently, and only
 layers 1 and 3 stood between that and a leak. See
-[architecture_decisions.md §2](../architecture_decisions.md) and D-004.
+[architecture-decisions.md §2](../explanation/architecture-decisions.md) and D-004.
 
 ---
 
@@ -379,7 +379,7 @@ SQL half.
 This section states how the guarantee maps onto FastAPI, because the isolation
 core (`TenantContext` → `SqlGuard` → `QueryExecutor`) is transport-agnostic by
 design and would be reused unchanged. The worked version, with the three
-vulnerabilities it closes, is in [SECURITY.md](../../SECURITY.md).
+vulnerabilities it closes, is in [SECURITY.md](../how-to/security-review.md).
 
 ```python
 from fastapi import Depends, FastAPI, HTTPException
@@ -424,6 +424,6 @@ Rules for the service boundary:
 | File | Asserts |
 |---|---|
 | `tests/test_tenant_isolation.py` (15) | A tenant-A query never returns tenant-B rows; predicates injected into subqueries, derived tables, CTE bodies; the **deliberately-bypassed-guard** test that proves layers 1 and 3 still hold; layer 3 is a detector, not a guarantee |
-| `tests/test_security.py` (18) | The three [SECURITY.md](../../SECURITY.md) fixes; guard rejections — multi-statement, non-SELECT, `sqlite_*`, off-allowlist, `ATTACH`/`PRAGMA` via `Command`, cross-database |
+| `tests/test_security.py` (18) | The three [SECURITY.md](../how-to/security-review.md) fixes; guard rejections — multi-statement, non-SELECT, `sqlite_*`, off-allowlist, `ATTACH`/`PRAGMA` via `Command`, cross-database |
 | `tests/test_entity_resolution.py` (10) | The cascade; fuzzy gate on candidate *count* not score; refusal on ambiguity; the nearest-suggestion floor |
 | `tests/test_conversation.py` (14) | Scope transitions; the confirmation gate binds only on an affirmative and cancels on anything else |

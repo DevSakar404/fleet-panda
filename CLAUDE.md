@@ -2,7 +2,7 @@
 
 Read this file at the start of every session. It is the source of truth for scope,
 standards, and constraints. If anything you are about to do conflicts with this
-file, stop and write the conflict into `OPEN_QUESTIONS.md` instead of guessing.
+file, stop and write the conflict into `docs/project/open-questions.md` instead of guessing.
 
 ---
 
@@ -56,7 +56,7 @@ the same core, not two implementations.
 
 **If any of these files are missing, STOP.** Do not fabricate data, do not
 generate synthetic fixtures, do not proceed with assumptions. Write what is
-missing into `OPEN_QUESTIONS.md` and report it.
+missing into `docs/project/open-questions.md` and report it.
 
 ---
 
@@ -64,7 +64,7 @@ missing into `OPEN_QUESTIONS.md` and report it.
 
 1. **No agent framework.** No LangChain, LlamaIndex, CrewAI, LangGraph. Direct
    provider SDK calls only. This is a deliberate decision to be defended in
-   DECISIONS.md — frameworks hide the prompts and control flow that the live
+   docs/explanation/decisions-log.md — frameworks hide the prompts and control flow that the live
    session will interrogate.
 2. **Tenant isolation is enforced in code, never by prompt.** A prompt asking the
    model to filter by tenant is not isolation. Enforcement lives in
@@ -79,7 +79,7 @@ missing into `OPEN_QUESTIONS.md` and report it.
 5. **Entity resolution fails closed.** When a tenant name is ambiguous, return
    candidates and ask — never silently pick the best fuzzy match.
 6. **Small files.** Target 100–300 lines. If a file passes ~350 lines, split it
-   along a real seam and say why in DECISIONS.md.
+   along a real seam and say why in docs/explanation/decisions-log.md.
 7. **Two registries are load-bearing** (see `src/data/sources.py` and the tool
    registry): adding a data source or a capability must not require editing
    agent logic.
@@ -93,13 +93,14 @@ Create exactly this. Do not invent additional top-level directories.
 ```
 .
 ├── CLAUDE.md
-├── README.md
-├── DECISIONS.md
-├── SECURITY.md            # stub only this session
-├── OPEN_QUESTIONS.md
-├── RECON.md               # data exploration findings
+├── README.md              # entry point + the documentation index
 ├── requirements.txt
 ├── .env.example
+├── docs/                  # all project docs, Diátaxis split (see section 10)
+│   ├── reference/         # what it is: the five feature specs + design.md
+│   ├── explanation/       # why: architecture-decisions.md, decisions-log.md, recon.md
+│   ├── how-to/            # tasks: run-locally.md, security-review.md
+│   └── project/           # meta: open-questions.md, handoff.md, assignment.md
 ├── data/                  # provided data files (read-only, never modified)
 ├── src/
 │   ├── config.py          # paths, model names, thresholds — no magic numbers elsewhere
@@ -154,9 +155,9 @@ Create exactly this. Do not invent additional top-level directories.
 
 ---
 
-## 6. DECISIONS.md protocol
+## 6. Decision-log protocol
 
-`DECISIONS.md` is an engineering journal, not an essay written at the end. Append
+`docs/explanation/decisions-log.md` is an engineering journal, not an essay written at the end. Append
 an entry **at the moment a real decision is made**, in this format:
 
 ```markdown
@@ -181,7 +182,7 @@ and one sentence on what a production system would need to do about it.
 ## 7. Current state and what is next
 
 **Authoritative source for state: the session summary at the top of
-`OPEN_QUESTIONS.md`.** This section is a map; that file is the ledger, and it is
+`docs/project/open-questions.md`.** This section is a map; that file is the ledger, and it is
 updated every session.
 
 ### Built and tested
@@ -193,9 +194,9 @@ updated every session.
 | Session | `agent/session.py` | `TenantContext`: TENANT or PLATFORM. Questions 1, 2, 7 and 8 are cross-tenant and are refused when scoped. |
 | Agent | `agent/{sql_agent,escalation,triage_agent,router}.py` | Two LLM calls per question (D-007); escalation is pure Python (D-010, D-012); triage fans in five sources. |
 | Transport | `interfaces/{cli_chat,voice_chat}.py`, `interfaces/speech.py` | Chat runs without an API key — triage, scoping and every refusal path are deterministic. Voice is push-to-talk (`whisper-1` in, `tts-1` out) over the shared `Conversation` core (D-018). |
-| Docs | `RECON.md`, `DESIGN.md`, `DECISIONS.md`, `SECURITY.md`, `OPEN_QUESTIONS.md` | Every assignment deliverable is written, voice included. |
+| Docs | `docs/explanation/recon.md`, `docs/reference/design.md`, `docs/explanation/decisions-log.md`, `docs/how-to/security-review.md`, `docs/project/open-questions.md` | Every assignment deliverable is written, voice included. |
 
-**No stubs remain. 303 tests pass.** The eight graded questions are asserted twice:
+**No stubs remain. 313 tests pass.** The eight graded questions are asserted twice:
 against hand-written reference SQL, and end to end through the agent.
 
 ### Not built
@@ -234,27 +235,29 @@ requirements closed were voice mode (Step 5) and pasted-ticket triage.
 Steps 0–3 (recon → data layer → database layer → scaffolding) are complete and are
 in git history, one commit per step. The requirements they were built against —
 the resolver cascade, the guard's rejection list, the executor's limits — are now
-documented where the code is: module docstrings, `DESIGN.md`, and the decision
+documented where the code is: module docstrings, `docs/reference/design.md`, and the decision
 entries that explain why each is shaped as it is.
 
 
 ## 8. Rules of engagement
 
 - **Never fabricate data or schema.** Read the actual database and the actual
-  JSON files. If something is unclear, it goes in `OPEN_QUESTIONS.md`.
+  JSON files. If something is unclear, it goes in `docs/project/open-questions.md`.
 - **Never modify anything in `data/`.**
 - Run the test suite after each step. Leave the repo green (with the SQL
   question tests skipped, which is expected at this stage).
-- **When you change a feature's behavior, update its spec in `docs/specs/` in
+- **When you change a feature's behavior, update its spec in `docs/reference/` in
   the same change** — the spec is a deliverable, not a snapshot. The map from
   code to spec is in section 10; if an edit crosses a feature boundary, update
-  every spec it touches, and log a genuinely contested choice in `DECISIONS.md`.
+  every spec it touches, and log a genuinely contested choice in `docs/explanation/decisions-log.md`.
   A spec that disagrees with the code is worse than no spec: the live session
   reads from it.
+- **After editing or moving any doc, run `python3 .github/check_doc_links.py`** —
+  it fails on a broken relative link, and CI runs the same check on every push.
 - If a design choice has a real trade-off and you cannot resolve it from this
   file, **pick the more conservative option, implement it, and log the question
-  in `OPEN_QUESTIONS.md`** with your reasoning and the alternative. Do not block.
-- At the end, write a `## Session summary` at the top of `OPEN_QUESTIONS.md`:
+  in `docs/project/open-questions.md`** with your reasoning and the alternative. Do not block.
+- At the end, write a `## Session summary` at the top of `docs/project/open-questions.md`:
   what was built, what was found in recon that changes the plan, what is stubbed,
   what decisions need a human, and the exact next three tasks.
 
@@ -277,7 +280,7 @@ These drive the schema card and the test suite. Keep them visible.
 Watch for the fan-out trap on 2 and 7: joining a one-to-many table before
 aggregating silently inflates every aggregate. This produces correct-looking SQL
 with wrong numbers, and it is the single most likely way to lose the correctness
-marks. Note in RECON.md which questions are exposed to it.
+marks. Note in docs/explanation/recon.md which questions are exposed to it.
 
 Note also that questions **1, 2, 7 and 8** are cross-tenant. In a tenant-scoped
 session the agent must refuse them; in an unscoped internal session it may answer.
@@ -286,25 +289,25 @@ That distinction lives in `TenantContext` and must be explicit, not implicit.
 (Corrected 2026-08-29, was "1 and 7". Q2 "which tenant delivered the most gallons"
 and Q8 "list tenants with declining volume" range over every tenant by
 construction -- answering them scoped returns one tenant's rows presented as a
-platform-wide ranking. See OPEN_QUESTIONS.md Q-001.)
+platform-wide ranking. See docs/project/open-questions.md Q-001.)
 
 ---
 
 ## 10. Feature specs — the code-to-spec map
 
-Each feature has a living spec under `docs/specs/`. These are what the live
+Each feature has a living spec under `docs/reference/`. These are what the live
 session reads from and points at, so they must track the code (section 8). When
 you touch the code in the left column, update the spec in the right column in the
-same change. `DESIGN.md` is the system-wide overview; `docs/architecture_decisions.md`
-and `DECISIONS.md` carry the *why* behind contested choices.
+same change. `docs/reference/design.md` is the system-wide overview; `docs/explanation/architecture-decisions.md`
+and `docs/explanation/decisions-log.md` carry the *why* behind contested choices.
 
 | Feature / code | Spec to keep in sync |
 |---|---|
-| `src/db/{guard,executor,connection,schema}.py` (tenant isolation, three layers) | `docs/specs/tenant_isolation_spec.md` |
-| `src/agent/sql_agent.py`, SQL generation + schema card | `docs/specs/sql_agent_spec.md` |
-| `src/agent/{triage_agent,escalation,ticket_parser}.py` (brief fan-in, scoring) | `docs/specs/ticket_triage_agent_spec.md` |
-| `src/data/resolver.py`, `src/agent/{router,session}.py` (resolution, routing, scope) | `docs/specs/entity_resolution_and_routing_spec.md` |
-| `src/interfaces/{voice_chat,speech}.py`, `src/agent/conversation.py` (voice transport) | `docs/specs/voice_interface_spec.md` |
+| `src/db/{guard,executor,connection,schema}.py` (tenant isolation, three layers) | `docs/reference/tenant-isolation.md` |
+| `src/agent/sql_agent.py`, SQL generation + schema card | `docs/reference/sql-agent.md` |
+| `src/agent/{triage_agent,escalation,ticket_parser}.py` (brief fan-in, scoring) | `docs/reference/ticket-triage.md` |
+| `src/data/resolver.py`, `src/agent/{router,session}.py` (resolution, routing, scope) | `docs/reference/entity-resolution.md` |
+| `src/interfaces/{voice_chat,speech}.py`, `src/agent/conversation.py` (voice transport) | `docs/reference/voice-interface.md` |
 
 Rule of thumb: if the change would make a sentence in one of these specs false,
 the spec edit is part of the change, not a follow-up.

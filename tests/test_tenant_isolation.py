@@ -221,7 +221,7 @@ def test_cross_tenant_questions_are_refused_in_a_tenant_session():
 
     CLAUDE.md section 9 lists only {1, 7}; Q2 ('which tenant delivered the most')
     and Q8 ('list tenants with declining volume') are equally cross-tenant. See
-    OPEN_QUESTIONS.md Q-001.
+    open-questions.md Q-001.
     """
     scoped = TenantContext.for_tenant(5)
     assert {q for q in range(1, 9) if not scoped.allows_question(q)} == {1, 2, 7, 8}

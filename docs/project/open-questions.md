@@ -1,4 +1,4 @@
-# OPEN_QUESTIONS.md
+# Open questions — session ledger
 
 ## Session summary
 
@@ -7,8 +7,8 @@ work end to end. 303 tests pass.**
 
 ### This session: an audit against the assignment, and the three gaps it found
 
-Read `REQUIEMENT_README.md` line by line against the build. Deliverables and
-`DECISIONS.md` content were complete. Three real gaps, all now closed:
+Read `assignment.md` line by line against the build. Deliverables and
+`decisions-log.md` content were complete. Three real gaps, all now closed:
 
 | Gap | Requirement | Fix |
 |---|---|---|
@@ -19,7 +19,7 @@ Read `REQUIEMENT_README.md` line by line against the build. Deliverables and
 **D-022 diverges from what Q-015 proposed, deliberately.** Q-015 suggested resolving
 a `tenant_name` out of the pasted body. The tenant now comes from the bound session
 instead, and an unscoped session is asked to scope before pasting — resolving a
-tenant out of untrusted text is SECURITY.md V1 arriving through a different door.
+tenant out of untrusted text is security-review.md V1 arriving through a different door.
 Both entries carry the argument; it is the one thing in this session worth
 overruling me on.
 
@@ -110,11 +110,11 @@ D-012 because it is the argument for the working value.
 ### Since you went to sleep
 
 - **Q-001 resolved** — you chose `{1, 2, 7, 8}`; CLAUDE.md §9 updated to match.
-- **SECURITY.md written** — three vulnerabilities with attack scenarios, fixes
+- **security-review.md written** — three vulnerabilities with attack scenarios, fixes
   pointing at the code and tests that implement them, seven secondary issues, and an
   explicit residual-risk section.
-- **DECISIONS.md completed** — cost model with measured token math, the 150-tenant
-  scaling answer, and the end-customer agent answer. That closes every DECISIONS.md
+- **decisions-log.md completed** — cost model with measured token math, the 150-tenant
+  scaling answer, and the end-customer agent answer. That closes every decisions-log.md
   requirement in the assignment.
 - **Q-017 fixed** — `config.LLM_MODEL` was `claude-sonnet-4-5` (not a current model
   ID) and the client passed `temperature=0.0` (removed on current models, returns
@@ -179,7 +179,7 @@ note recording the correction. `config.CROSS_TENANT_QUESTIONS` and
 `tests/test_sql_questions.py` already carried the corrected set; nothing else changed.
 
 ### Q-002 · The `product_area` → module mapping is my inference
-**Context:** DECISIONS.md D-002. `billing→invoicing` and `reporting→analytics` are not
+**Context:** decisions-log.md D-002. `billing→invoicing` and `reporting→analytics` are not
 documented anywhere in the provided data; I inferred them from the vocabularies. `integration`
 and `login_access` I treated as platform-wide and gated by no module.
 **Taken:** the conservative direction is to under-flag rather than over-flag, so anything not in
@@ -197,14 +197,14 @@ All commands in README assume `.venv/bin/python`.
 ### Q-004 · Recon scripts are not committed
 **Context:** CLAUDE.md §4 fixes the directory layout and says not to invent top-level
 directories. The three recon scripts have no home in that layout.
-**Taken:** inlined the queries that produce each non-obvious number into RECON.md instead, so
+**Taken:** inlined the queries that produce each non-obvious number into recon.md instead, so
 every claim is reproducible without the scripts. The scripts were run from a scratch directory
 and discarded.
 **Needs you to:** decide whether a `scripts/` directory is worth adding to §4. My view: yes for
 the live session — being able to re-run recon in front of the interviewer is worth one folder.
 
 ### Q-005 · "Declining delivery volume" (Q8) has no materiality threshold
-**Context:** RECON.md §11. Anchored on the data, seven of twelve tenants are technically
+**Context:** recon.md §11. Anchored on the data, seven of twelve tenants are technically
 declining, but t1 at **-1.5%** is noise and t4 at **-16.3%** is a real signal. The question as
 written admits any negative delta.
 **Taken:** provisional cut at **-10%**, held in `src/config.py:DECLINE_THRESHOLD_PCT`, and the
@@ -221,7 +221,7 @@ silently corrected in CLAUDE.md, same reasoning as Q-001.
 **Needs you to:** nothing beyond a one-word edit to CLAUDE.md if you want the file consistent.
 
 ### Q-007 · The date anchor is stated in prose, not in structured output — RESOLVED 2026-08-29
-**Context:** DECISIONS.md D-001. The agent answers "in the 7 days to 2026-05-29 (most recent
+**Context:** decisions-log.md D-001. The agent answers "in the 7 days to 2026-05-29 (most recent
 data available)". That is honest for a human reader, but a downstream consumer parsing the JSON
 response has no machine-readable field telling it the window was shifted 91 days.
 **Taken:** prose only for now — no response schema exists yet at Step 3.
@@ -241,7 +241,7 @@ provider, named directly, is easier to explain in the walkthrough than an abstra
 implementation.
 
 ### Q-009 · `UNION` queries are rejected outright
-**Context:** DECISIONS.md D-005. sqlglot parses `SELECT ... UNION SELECT ...` with an
+**Context:** decisions-log.md D-005. sqlglot parses `SELECT ... UNION SELECT ...` with an
 `exp.Union` root, and the guard only accepts an `exp.Select` root, so every UNION is
 refused with "Only SELECT statements are permitted".
 **Taken:** left as a rejection. Isolating a UNION is not hard — each arm is an
@@ -252,7 +252,7 @@ unattended. Refusing is the conservative direction and no test question needs UN
 with the arm-level tests written first. It is roughly a five-line change plus tests.
 
 ### Q-010 · The post-execution assertion cannot see past the row cap
-**Context:** DECISIONS.md D-004. Layer 3 inspects returned rows, so a leaking query
+**Context:** decisions-log.md D-004. Layer 3 inspects returned rows, so a leaking query
 whose first `MAX_RESULT_ROWS` rows all belong to the bound tenant passes it. This is
 not theoretical — the test written to prove the assertion fires initially passed for
 the wrong reason, because the first 50 rows of `delivery_orders` are all tenant 1's.
@@ -265,18 +265,18 @@ unlimited query as a fourth layer. My view: not worth it — it doubles query co
 defend against a bug the AST tests already cover, and layer 3's job is to be a smoke
 alarm, not a second guard.
 
-### Q-011 · `DESIGN.md` is a file CLAUDE.md §4 does not list
+### Q-011 · `design.md` is a file CLAUDE.md §4 does not list
 **Context:** CLAUDE.md §4 gives an exact file layout and says not to invent additions.
 I followed that during the foundation session and wrote no design document, putting the
-architecture into README.md, DECISIONS.md and module docstrings instead. On review that
+architecture into README.md, decisions-log.md and module docstrings instead. On review that
 distributed the end-to-end flow across six docstrings, with no single page showing a
 request travelling through the system — the thing the 10-minute code walkthrough in the
 live session actually needs.
-**Taken:** added `DESIGN.md` at your explicit request. It duplicates no content: the
+**Taken:** added `design.md` at your explicit request. It duplicates no content: the
 diagrams and the module-boundary table exist nowhere else. `implementation.md` was
 deliberately *not* added — CLAUDE.md §7 is the implementation plan, and a second copy
 would drift from it.
-**Needs you to:** add `DESIGN.md` to the §4 layout so the charter and the repo agree.
+**Needs you to:** add `design.md` to the §4 layout so the charter and the repo agree.
 Flagging separately that I should have logged this as a question during the foundation
 session rather than silently deciding not to write it — the charter's rule is to log
 conflicts, and "the layout omits something useful" is a conflict.
@@ -332,7 +332,7 @@ on Q2 ("last month" as a calendar month, not a rolling 30 days) and Q4 (the
 which no error will reveal).
 
 ### Q-013 · Escalation level saturates within a struggling account — FIXED 2026-08-29
-**Context:** DECISIONS.md D-010. Account-level signals (health, contract, CARR,
+**Context:** decisions-log.md D-010. Account-level signals (health, contract, CARR,
 competitor) outweigh ticket-level ones (duplicates, priority, module gap), so all 12
 of tenant 4's tickets and all 9 of tenant 8's score CRITICAL. Across the roster the
 spread is reasonable — standard 20, elevated 20, urgent 13, critical 32, and the
@@ -384,7 +384,7 @@ What I built instead takes the tenant from the **bound session** and refuses to 
 paste in an unscoped session.
 
 The reason: resolving a tenant *out of the pasted text* is the caller-supplied
-`tenant_id` vulnerability from SECURITY.md V1 wearing a different hat. In a scoped
+`tenant_id` vulnerability from security-review.md V1 wearing a different hat. In a scoped
 session, honouring a body that names another customer lets a rep assemble tenant 7's
 brief by typing one line — so you would have to add "and it must equal the session
 tenant", at which point the session is the authority and the parsed name is dead weight.
@@ -463,7 +463,7 @@ described deployment.
 **What survives:** the observation is still correct for a real deployment. The moment any
 of this is exposed — an HTTP endpoint, a shared host, a voice line reachable by a tenant's
 own staff or their end-customers — the actor changes and self-asserted scope becomes a
-genuine vulnerability. The end-customer agent described in DECISIONS.md is exactly that
+genuine vulnerability. The end-customer agent described in decisions-log.md is exactly that
 case, and it is where this has to be solved first.
 
 **What does not survive:** calling it blocking, or implying the submission has a gap
@@ -486,7 +486,7 @@ honest absence.
 
 **Related:** F2 (`needs_confirmation` unenforced) and F3 (ticket enumeration oracle) from
 the same audit were genuine defects at any threat model and are **fixed** — see the audit
-appendix in SECURITY.md.
+appendix in security-review.md.
 
 ---
 
@@ -530,7 +530,7 @@ class of dirt harmless.
 
 **Needs a human decision:** whether corpus integrity belongs in code at all while
 `data/` is a read-only fixture. My position is that it does not, and that the recon
-queries in RECON.md are the check. The trigger to revisit is the source changing:
+queries in recon.md are the check. The trigger to revisit is the source changing:
 the moment tickets or transcripts arrive from an API rather than a file, the orphan
 FK row above becomes a silent data-loss bug rather than a fixture curiosity.
 

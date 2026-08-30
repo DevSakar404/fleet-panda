@@ -28,7 +28,7 @@ class LLMConfigurationError(RuntimeError):
 
 @dataclass(frozen=True, slots=True)
 class LLMResponse:
-    """One completion, plus the token counts the cost model in DECISIONS.md needs."""
+    """One completion, plus the token counts the cost model in decisions-log.md needs."""
 
     text: str
     input_tokens: int

@@ -76,7 +76,7 @@ class TenantContext:
         them inside a tenant-scoped session would return one tenant's rows and
         present them as a platform-wide ranking -- a wrong answer that looks
         right, which is worse than a refusal. (CLAUDE.md section 9 lists only
-        {1, 7}; see OPEN_QUESTIONS.md Q-001.)
+        {1, 7}; see open-questions.md Q-001.)
         """
         if self.scope is SessionScope.PLATFORM:
             return True

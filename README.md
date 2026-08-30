@@ -15,14 +15,14 @@ isolation, routing, and escalation is made once, below the transport boundary.
 | | |
 |---|---|
 | Build | Chat and voice both work end to end. No stubs remain. |
-| Tests | **303 pass, no skips.** No test needs an API key, a microphone, or a network connection. |
+| Tests | **313 pass, no skips.** No test needs an API key, a microphone, or a network connection. |
 | Live model | Run against a real model: **isolation 7/7**, data correctness **7-8/8** (D-023, D-024). Measured on `gpt-4o-mini`. |
 | Known gaps | Q8 varies run to run. Voice is verified without a microphone in the loop (Q-020). |
 
 The system has **no HTTP API**. It ships as two terminal transports. Where this
 document refers to "the endpoint" or "deploying as a service", that is a
 forward-looking note, not a description of code in this repository — see
-[`docs/specs/tenant_isolation_spec.md`](docs/specs/tenant_isolation_spec.md#11-deploying-as-a-service).
+[`docs/reference/tenant-isolation.md`](docs/reference/tenant-isolation.md#11-deploying-as-a-service).
 
 ---
 
@@ -125,8 +125,8 @@ Measured on `gpt-4o-mini`: **isolation 7/7** (four cross-tenant refusals, three
 scoped allowances) and **data correctness 7-8 of 8**. Only Q8 still moves between
 runs — it has four undetermined degrees of freedom (measure, window definition,
 boundary convention, materiality cut) where the others have one or none. See
-[D-023](DECISIONS.md) for what the original failures were and why prompt tuning
-has a ceiling, and [D-024](DECISIONS.md) for the anchor-drift finding.
+[D-023](docs/explanation/decisions-log.md) for what the original failures were and why prompt tuning
+has a ceiling, and [D-024](docs/explanation/decisions-log.md) for the anchor-drift finding.
 
 ---
 
@@ -138,23 +138,25 @@ This documentation is modular (hub-and-spoke, following the
 | Document | Diátaxis type | What it covers |
 |---|---|---|
 | **README.md** (this file) | — | Summary, setup, how to run, the map below |
-| [docs/architecture_decisions.md](docs/architecture_decisions.md) | Explanation | The *why*. Why AST parsing (`sqlglot`) enforces multi-tenant SQL isolation; why the triage context pipeline is a structured join and deterministic score rather than RAG; the trade-offs behind each. |
-| [docs/specs/tenant_isolation_spec.md](docs/specs/tenant_isolation_spec.md) | Reference / build guide | The security design: the `TenantContext` authority object, how the tenant is established and propagated, the three enforcement layers, and how the same guarantee maps onto a FastAPI service (dependency-injected tenant, no caller-supplied `tenant_id`). |
-| [docs/specs/sql_agent_spec.md](docs/specs/sql_agent_spec.md) | Reference | The SQL dispatch agent: 2-call architecture (generation vs synthesis), schema card introspector, two-phase cross-tenant authority check, prompt caching, date anchor (`2026-05-29`), and retry lifecycle. |
-| [docs/specs/ticket_triage_agent_spec.md](docs/specs/ticket_triage_agent_spec.md) | Reference | The triage agent: pipeline stages, the five sources, KB retrieval scoring, the escalation rubric (weights and thresholds), prompt structure, customer-profile ("CRM") source, and evaluation criteria. |
-| [docs/specs/entity_resolution_and_routing_spec.md](docs/specs/entity_resolution_and_routing_spec.md) | Reference | The entity resolution & routing pipeline: 5-stage cascade, RapidFuzz scoring, pending tenant confirmation security gate, and heuristic intent classification. |
-| [docs/specs/voice_interface_spec.md](docs/specs/voice_interface_spec.md) | Reference | The voice transport pipeline: Push-to-talk recording, Whisper STT, `speakable()` sanitization rules (date rewrite and brief condensation), and acoustic confirmation safety. |
-| [docs/handoff.md](docs/handoff.md) | Explanation / status | What is complete, what is pending, and the known edge cases and limitations. |
+| [docs/explanation/architecture-decisions.md](docs/explanation/architecture-decisions.md) | Explanation | The *why*. Why AST parsing (`sqlglot`) enforces multi-tenant SQL isolation; why the triage context pipeline is a structured join and deterministic score rather than RAG; the trade-offs behind each. |
+| [docs/reference/tenant-isolation.md](docs/reference/tenant-isolation.md) | Reference | The security design: the `TenantContext` authority object, how the tenant is established and propagated, the three enforcement layers, and how the same guarantee maps onto a FastAPI service (dependency-injected tenant, no caller-supplied `tenant_id`). |
+| [docs/reference/sql-agent.md](docs/reference/sql-agent.md) | Reference | The SQL dispatch agent: 2-call architecture (generation vs synthesis), schema card introspector, two-phase cross-tenant authority check, prompt caching, date anchor (`2026-05-29`), and retry lifecycle. |
+| [docs/reference/ticket-triage.md](docs/reference/ticket-triage.md) | Reference | The triage agent: pipeline stages, the five sources, KB retrieval scoring, the escalation rubric (weights and thresholds), prompt structure, customer-profile ("CRM") source, and evaluation criteria. |
+| [docs/reference/entity-resolution.md](docs/reference/entity-resolution.md) | Reference | The entity resolution & routing pipeline: 5-stage cascade, RapidFuzz scoring, pending tenant confirmation security gate, and heuristic intent classification. |
+| [docs/reference/voice-interface.md](docs/reference/voice-interface.md) | Reference | The voice transport pipeline: push-to-talk recording, domain-primed Whisper STT + `normalize_transcript` repair, prose-only `spoken_text` rendering, sentence-streamed TTS, and the acoustic confirmation gate. |
+| [docs/reference/design.md](docs/reference/design.md) | Reference | Request-flow diagrams and module boundaries. |
+| [docs/how-to/run-locally.md](docs/how-to/run-locally.md) | How-to | Run chat, voice, and offline mode; run the test suite. |
+| [docs/how-to/security-review.md](docs/how-to/security-review.md) | How-to | Code-review challenge: three vulnerabilities in a sample text-to-SQL endpoint, each with an attack scenario and the implemented fix. |
+| [docs/project/handoff.md](docs/project/handoff.md) | Project / status | What is complete, what is pending, and the known edge cases and limitations. |
 
 ### Supporting deliverables (assignment context, retained)
 
 | Document | What it is |
 |---|---|
-| [DECISIONS.md](DECISIONS.md) | The dated engineering journal (D-001 … D-024), plus the cost model, the 150-tenant scaling answer, and the end-customer-agent answer. `docs/architecture_decisions.md` is the narrative digest of this file. |
-| [SECURITY.md](SECURITY.md) | Code-review challenge: three vulnerabilities in a sample text-to-SQL endpoint, each with an attack scenario and the implemented fix. |
-| [RECON.md](RECON.md) | Step 0 data exploration. Explains most of the design. |
-| [DESIGN.md](DESIGN.md) | Request-flow diagrams and module boundaries. |
-| [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md) | The state ledger: session summary and questions that need a human. |
+| [docs/explanation/decisions-log.md](docs/explanation/decisions-log.md) | The dated engineering journal (the D-NNN entries), plus the cost model, the 150-tenant scaling answer, and the end-customer-agent answer. The narrative digest of it is [architecture-decisions.md](docs/explanation/architecture-decisions.md). |
+| [docs/explanation/recon.md](docs/explanation/recon.md) | Step 0 data exploration. Explains most of the design. |
+| [docs/project/open-questions.md](docs/project/open-questions.md) | The state ledger: session summary and questions that need a human. |
+| [docs/project/assignment.md](docs/project/assignment.md) | The original take-home brief (verbatim), retained for grading context. |
 | [CLAUDE.md](CLAUDE.md) | The build charter — scope and standards. |
 
 ---
@@ -186,7 +188,7 @@ src/
   agent/               session (TenantContext), router, conversation, sql_agent,
                        triage_agent, ticket_parser, escalation (pure, no LLM)
   interfaces/          cli_chat, voice_chat, speech (the only file touching audio)
-tests/                 301 tests; entity resolution, tenant isolation, the 8
+tests/                 313 tests; entity resolution, tenant isolation, the 8
                        questions, security fixes, escalation, triage, ticket
                        parsing, voice
 ```

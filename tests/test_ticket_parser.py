@@ -128,7 +128,7 @@ def test_the_pasted_id_collides_with_no_real_ticket():
 def test_the_pasted_text_cannot_choose_its_own_tenant(claim):
     """The body may claim any company it likes; the caller's tenant is what binds.
 
-    This is SECURITY.md V1 in a different costume -- a tenant taken from the
+    This is security-review.md V1 in a different costume -- a tenant taken from the
     payload rather than from the session.
     """
     ticket = parse(f"Subject: Something broke\n{claim}\n", tenant_id=4)

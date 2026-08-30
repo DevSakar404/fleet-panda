@@ -108,7 +108,7 @@ def test_no_more_than_the_configured_number_of_articles(repository):
 
 
 def test_billing_tickets_return_no_article_rather_than_a_bad_one(repository):
-    """RECON.md section 10: `billing` is the one ticket area with no KB coverage.
+    """recon.md section 10: `billing` is the one ticket area with no KB coverage.
 
     Surfacing the least-bad match would be worse than saying nothing -- a CSM
     would follow an irrelevant runbook.

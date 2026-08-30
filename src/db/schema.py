@@ -7,7 +7,7 @@ text-to-SQL prompt, and by `guard.py` indirectly via the table allowlist. Calls:
 Generated rather than pasted from `data/SCHEMA.md` because recon found the
 documentation and the data disagree: `SCHEMA.md` advertises three values for
 `shifts.status` where the data has one, and two for `customers.status` where the
-data has one (RECON.md section 3, DECISIONS.md DQ-3). A prompt that advertises a
+data has one (recon.md section 3, decisions-log.md DQ-3). A prompt that advertises a
 literal which never occurs invites a filter that correctly returns zero rows --
 indistinguishable from a bug at the UI, and impossible for the model to know
 about.

@@ -281,7 +281,7 @@ class Router:
         The tenant comes from the bound session and never from the pasted text.
         A body can claim to be from any company, and honouring that claim would
         let a scoped rep assemble a brief about a different customer by typing one
-        line -- the caller-supplied `tenant_id` hole from SECURITY.md V1 arriving
+        line -- the caller-supplied `tenant_id` hole from security-review.md V1 arriving
         through a different door. So an unscoped session is asked to scope first
         rather than guessing, which is the same answer the resolver gives to an
         ambiguous name: say who you mean.

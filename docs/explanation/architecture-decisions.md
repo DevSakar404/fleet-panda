@@ -1,11 +1,11 @@
 # Architecture Decisions — the "why"
 
-← [README](../README.md) · Reference specs: [tenant isolation](specs/tenant_isolation_spec.md) · [ticket triage](specs/ticket_triage_agent_spec.md)
+← [README](../../README.md) · Reference specs: [tenant isolation](../reference/tenant-isolation.md) · [ticket triage](../reference/ticket-triage.md)
 
 This is the **narrative digest** of the design. It explains the reasoning and the
 trade-offs behind the load-bearing choices. The dated, per-decision journal —
 context, options, chosen option, trade-off accepted, and the file it lives in —
-is [`DECISIONS.md`](../DECISIONS.md) (entries D-001 … D-024). Decision numbers
+is [`decisions-log.md`](decisions-log.md) (the dated D-NNN entries). Decision numbers
 below link to it.
 
 ---
@@ -32,7 +32,7 @@ lines total, and each line is one we can explain and test.
 
 ## 2. Multi-tenant SQL isolation is an AST rewrite, not a prompt and not a regex
 
-This is the core security decision. [D-004](../DECISIONS.md), [D-005](../DECISIONS.md).
+This is the core security decision. [D-004](decisions-log.md), [D-005](decisions-log.md).
 
 A tenant-scoped session must never see another tenant's rows. The generated SQL
 is untrusted (the model can be wrong; the model can be prompt-injected). Three
@@ -45,7 +45,7 @@ ways to enforce the constraint were on the table:
 | **AST parse + rewrite** (chosen) | Parsing to a tree makes "every tenant-scoped table reference carries a tenant predicate" a statement we can *walk the tree and verify*. |
 
 **How the chosen approach works** (`src/db/guard.py`, full detail in the
-[isolation spec](specs/tenant_isolation_spec.md)):
+[isolation spec](../reference/tenant-isolation.md)):
 
 1. Parse with `sqlglot.parse(sql, dialect="sqlite")` — `parse`, not `parse_one`,
    so a smuggled second statement (`SELECT 1; DROP TABLE trucks`) is visible and
@@ -71,7 +71,7 @@ so the injection pass found no tables, added no predicates, and emitted
 - The guard is **layer 2 of 3**. Layer 1 (a read-only connection) and layer 3 (a
   post-execution assertion that no returned row carries a foreign `tenant_id`)
   are positioned precisely so that a total failure of layer 2 is still contained.
-  Each layer assumes the others may fail. [D-004](../DECISIONS.md).
+  Each layer assumes the others may fail. [D-004](decisions-log.md).
 
 **Trade-off accepted:** we take a hard dependency on `sqlglot`'s SQLite dialect
 coverage and pin the version. A query `sqlglot` cannot parse is refused, not
@@ -84,7 +84,7 @@ guarantee, and the test suite pins that ceiling rather than papering over it.
 
 ## 3. The triage context pipeline is a structured join with a deterministic score — not RAG
 
-[D-013](../DECISIONS.md), [D-010](../DECISIONS.md), [D-014](../DECISIONS.md).
+[D-013](decisions-log.md), [D-010](decisions-log.md), [D-014](decisions-log.md).
 
 "Pull the customer's full context and produce a brief" reads like a
 retrieval-augmented-generation problem. It is not, for this data:
@@ -124,15 +124,15 @@ escalated?" answerable from `assessment.signals` — an audit trail of
 **Trade-off accepted:** keyword-plus-`product_area` retrieval will miss an
 article that describes the same failure in different words. At 12 articles a CSM
 can skim the whole KB; at 500 articles this would need revisiting, and
-[D-013](../DECISIONS.md) says so explicitly. The escalation weights are a
+[D-013](decisions-log.md) says so explicitly. The escalation weights are a
 first-pass calibration against a 12-tenant roster and are flagged for human
-review (Q-002, Q-005, Q-014 in [OPEN_QUESTIONS.md](../OPEN_QUESTIONS.md)).
+review (Q-002, Q-005, Q-014 in [open-questions.md](../project/open-questions.md)).
 
 ---
 
 ## 4. Escalation is additive points in Python; the LLM only explains it
 
-[D-010](../DECISIONS.md), [D-011](../DECISIONS.md), [D-012](../DECISIONS.md).
+[D-010](decisions-log.md), [D-011](decisions-log.md), [D-012](decisions-log.md).
 
 A model asked to weigh health score against CARR against contract proximity gives
 a different answer on a different day. "Why was this ticket escalated?" has to be
@@ -143,10 +143,10 @@ LLM receives the level and writes the paragraph explaining it.
 
 Two refinements the calibration forced:
 
-- **`today` is injected** ([D-011](../DECISIONS.md)). Contract dates are
+- **`today` is injected** ([D-011](decisions-log.md)). Contract dates are
   forward-looking facts on the real calendar; they must not drift with the
   dataset's 91-day staleness. This is the *second clock* — see §5.
-- **Account-state points are capped** at `URGENT + 10` ([D-012](../DECISIONS.md)).
+- **Account-state points are capped** at `URGENT + 10` ([D-012](decisions-log.md)).
   Uncapped, account signals reach 95 points while ticket signals reach 35, so
   every ticket from a struggling tenant scored CRITICAL and the level stopped
   ranking anything — all twelve of one tenant's tickets were identical. The cap
@@ -158,7 +158,7 @@ Two refinements the calibration forced:
 
 ## 5. Two clocks, on purpose
 
-[D-001](../DECISIONS.md), [D-011](../DECISIONS.md).
+[D-001](decisions-log.md), [D-011](decisions-log.md).
 
 The dispatch data ends 2026-05-29. Anchoring "last 30 days" on `date('now')`
 returns zero rows and reports every tenant as having stopped delivering.
@@ -188,7 +188,7 @@ apply, which is the first line of the next incident report.
 
 ## 6. Text-to-SQL is two LLM calls, split so the prose call cannot compute
 
-[D-007](../DECISIONS.md), [D-008](../DECISIONS.md), [D-009](../DECISIONS.md).
+[D-007](decisions-log.md), [D-008](decisions-log.md), [D-009](decisions-log.md).
 
 Call one turns a question into SQL and is the only step allowed to be creative.
 Call two turns the returned rows into two or three sentences and is given no
@@ -196,7 +196,7 @@ ability to compute anything — it receives the numbers and is told to use them
 verbatim and invent none. Nothing between the two trusts either.
 
 The cross-tenant refusal for a scoped session is checked **twice, from two
-independent inputs** ([D-008](../DECISIONS.md)): once from the model's own
+independent inputs** ([D-008](decisions-log.md)): once from the model's own
 `is_cross_tenant` flag (which reads the *question* and catches "compare us to the
 others" intent the SQL might not show), and once structurally from the generated
 SQL (`GROUP BY` / `ORDER BY` on `tenant_id` means the query is shaped as a
@@ -214,8 +214,8 @@ ranking). Either firing is enough to refuse.
 | Structured join, not RAG, for KB | No vector store; auditable ranking; honest "no match" | Misses semantically-similar articles worded differently (fine at n=12) |
 | Deterministic escalation | Reproducible, explainable-from-code decisions | Weights are a first-pass calibration pending human review |
 | Two clocks | Non-empty answers on stale data; correct contract math | The reader must track which clock a number is on |
-| Two-call SQL split | The step that emits numbers cannot fabricate them | Two round trips per question (latency budget noted in [D-019](../DECISIONS.md)) |
+| Two-call SQL split | The step that emits numbers cannot fabricate them | Two round trips per question (latency budget noted in [D-019](decisions-log.md)) |
 | Prompt caching on SQL schema card | ~26% cost reduction on questions; reduced voice latency | Schema card must remain >= 1024 tokens to trigger provider caching |
 
 For the cost model, the 150-tenant scaling analysis, and the two-layer
-end-customer isolation design, see the back half of [`DECISIONS.md`](../DECISIONS.md).
+end-customer isolation design, see the back half of [`decisions-log.md`](decisions-log.md).

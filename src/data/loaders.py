@@ -190,7 +190,7 @@ def load_tenants() -> tuple[Tenant, ...]:
             health_score=row["health_score"],
             carr=row["carr"],
             # NOTE: the key is `modules_active`, not `active_modules` as CLAUDE.md
-            # section 7 has it. See OPEN_QUESTIONS.md Q-006.
+            # section 7 has it. See open-questions.md Q-006.
             modules_active=frozenset(row["modules_active"]),
             contract_end_date=_parse_date(row.get("contract_end_date")),
             assigned_csm=row["assigned_csm"],

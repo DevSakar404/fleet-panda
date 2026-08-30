@@ -1,10 +1,10 @@
-# RECON.md — Step 0 data exploration
+# Recon — Step 0 data exploration
 
 Findings from querying `data/dispatch.db` and loading the five JSON sources directly.
 Nothing here is assumed; every claim below was produced by a script rather than read off
 `SCHEMA.md`. The queries that produced each non-obvious number are inlined below so any claim
 can be re-derived. The recon scripts themselves are deliberately not committed: CLAUDE.md §4
-fixes the directory layout and a `scripts/` tree is not in it (see OPEN_QUESTIONS.md Q-004).
+fixes the directory layout and a `scripts/` tree is not in it (see open-questions.md Q-004).
 
 **Reference date used throughout: 2026-08-28** (the day this recon ran).
 
@@ -71,7 +71,7 @@ it is the generation timestamp of the fixture, not a business event. It must nev
 date arithmetic. `order_date` and `delivery_date` are the real columns.
 
 **Decision taken:** anchor relative date windows on `MAX(delivery_date)` in the data and state
-the anchor in the answer text. See DECISIONS.md D-001.
+the anchor in the answer text. See decisions-log.md D-001.
 
 ---
 
@@ -253,7 +253,7 @@ not entitled to. Highest-value cases:
 - **t7 Atlantic Coast**: two `tank_monitor` tickets (#1043, #1045) without the module.
 - **t8 Timber Ridge**: three `billing` tickets without `invoicing`.
 
-The mapping is a judgement call and is logged as DECISIONS.md D-002.
+The mapping is a judgement call and is logged as decisions-log.md D-002.
 
 ---
 

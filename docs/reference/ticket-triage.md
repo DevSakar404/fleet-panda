@@ -1,6 +1,6 @@
 # Spec — Ticket Triage Agent
 
-← [README](../../README.md) · [Architecture decisions](../architecture_decisions.md) · Sibling specs: [tenant isolation](tenant_isolation_spec.md) · [SQL agent](sql_agent_spec.md) · [entity resolution](entity_resolution_and_routing_spec.md) · [voice interface](voice_interface_spec.md)
+← [README](../../README.md) · [Architecture decisions](../explanation/architecture-decisions.md) · Sibling specs: [tenant isolation](tenant-isolation.md) · [SQL agent](sql-agent.md) · [entity resolution](entity-resolution.md) · [voice interface](voice-interface.md)
 
 **Status:** implemented and tested (`tests/test_triage.py`,
 `tests/test_escalation.py`, `tests/test_ticket_parser.py`). Triage is invoked
@@ -55,7 +55,7 @@ without re-running anything.
 ## 3. The five sources
 
 All retrieved through the one `Repository`, which applies tenant scoping centrally
-(see [tenant isolation spec §10](tenant_isolation_spec.md)). Every section
+(see [tenant isolation spec §10](tenant-isolation.md)). Every section
 **degrades to empty rather than failing** — 6 of 12 tenants have no
 `tank_readings`, `billing` tickets have no KB article, 37 of 85 tickets have a
 null resolution. `TicketContext.missing_sources` names what came back empty, so
@@ -256,7 +256,7 @@ malformed narrative costs formatting, not the brief.
 - **Visibility check** (`Router._triage`): in a bound session, a ticket whose
   `tenant_id` differs from the session's returns the *same* "I can't find ticket
   #N" message as a missing ticket — not a distinguishable refusal (enumeration
-  oracle, F3 in [SECURITY.md](../../SECURITY.md)).
+  oracle, F3 in [SECURITY.md](../how-to/security-review.md)).
 
 ---
 

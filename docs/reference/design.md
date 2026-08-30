@@ -1,7 +1,7 @@
-# DESIGN.md — how the pieces fit
+# Design — how the pieces fit
 
-The walkthrough script. `RECON.md` explains *why* the design is shaped this way;
-`DECISIONS.md` records the contested choices; this file is the map you read while
+The walkthrough script. `recon.md` explains *why* the design is shaped this way;
+`decisions-log.md` records the contested choices; this file is the map you read while
 tracing a request end to end.
 
 **Status:** everything below is built and tested. A pasted ticket body is parsed
@@ -132,7 +132,7 @@ OPEN_QUESTIONS Q-010 argues against adding a fourth layer to close it.
 The reason there are three and not one: during Step 2, sqlglot 30's rename of the
 `Select` node's `from` argument to `from_` made the injection pass find no tables.
 It emitted syntactically perfect, entirely unfiltered SQL. Layer 2 was the layer
-that failed, so only layers 1 and 3 could have caught it. See DECISIONS.md D-004.
+that failed, so only layers 1 and 3 could have caught it. See decisions-log.md D-004.
 
 ## 4. Why each module is its own file
 
@@ -175,12 +175,12 @@ caller — which is the registry earning its place rather than being ceremony.
 | "How do you know it works?" | `tests/test_tenant_isolation.py` — the bypassed-guard test is the one to open |
 | "How does entity resolution feed the SQL agent?" | `data/resolver.py:resolve` → `agent/session.py:TenantContext` → `db/guard.py` takes the id from the context |
 | "Why does it refuse this?" | `session.py:allows_question` (authority) vs `guard.py` reasons (the SQL itself) |
-| "What did the data look like?" | `RECON.md` §2 and §6 |
+| "What did the data look like?" | `recon.md` §2 and §6 |
 | "Why not a vector DB?" | `agent/triage_agent.py` docstring — 12 articles |
 | "Why not LangChain?" | `llm/client.py` — 78 lines, one provider, no indirection |
 
-| "Why isn't voice a streaming pipeline?" | `DECISIONS.md` D-019 — the latency table (only TTS overlaps, and it now does: D-026) |
-| "How is voice made faster / more accurate?" | `DECISIONS.md` D-026 — streamed TTS, primed Whisper, offline `say` |
+| "Why isn't voice a streaming pipeline?" | `decisions-log.md` D-019 — the latency table (only TTS overlaps, and it now does: D-026) |
+| "How is voice made faster / more accurate?" | `decisions-log.md` D-026 — streamed TTS, primed Whisper, offline `say` |
 
 ## 6. What is not designed yet
 

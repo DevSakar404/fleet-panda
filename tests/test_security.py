@@ -1,6 +1,6 @@
 """Security properties of the SQL path.
 
-The SECURITY.md write-up is out of scope this session (CLAUDE.md section 7), but
+The security-review.md write-up is out of scope this session (CLAUDE.md section 7), but
 the defences it will describe are built now, so they are tested now. Each test
 names the attack it prevents rather than the method it calls.
 

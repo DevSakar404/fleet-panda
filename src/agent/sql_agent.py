@@ -57,11 +57,11 @@ class SqlAnswer:
     tenant-scoped session" is a normal conversational outcome that the transport
     has to render, and it carries a reason the user can act on.
 
-    The anchor fields exist because the dataset ends 2026-05-29 (DECISIONS.md
+    The anchor fields exist because the dataset ends 2026-05-29 (decisions-log.md
     D-001). Prose alone was the alternative; a machine-readable window means the
     voice transport can say the date on the first answer of a session and stay
     quiet afterwards, and a downstream consumer is not left parsing English to
-    discover the numbers are 91 days old. See OPEN_QUESTIONS.md Q-007.
+    discover the numbers are 91 days old. See open-questions.md Q-007.
     """
 
     question: str

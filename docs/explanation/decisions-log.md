@@ -1,4 +1,4 @@
-# DECISIONS.md — engineering journal
+# Decision log — engineering journal
 
 Appended at the moment each decision was made, in the format defined in CLAUDE.md §6.
 Only contested decisions are logged.
@@ -7,7 +7,7 @@ Only contested decisions are logged.
 
 ### D-001 · Anchor relative date windows on the data, not on `now()`
 **Date:** 2026-08-28
-**Context:** Recon (RECON.md §2) found the operational window ends **2026-05-29**, 91 days
+**Context:** Recon (recon.md §2) found the operational window ends **2026-05-29**, 91 days
 before today. Four of the eight graded questions use a relative window ("last 7 days", "past
 30 days", "last month", "last 30 vs previous 30"). Anchored on `date('now')` they return
 literally zero rows: Q1 = 0, Q5 = 0, Q2 = 0. The SQL is correct, the answer is useless, and in
@@ -23,7 +23,7 @@ a live demo it reads as a broken agent.
 looking at a stale fixture, which is exactly the right thing for them to know. It also survives
 the data being refreshed — no constant to update.
 **Trade-off accepted:** every relative-window query pays a `MAX()` subquery (a full scan today,
-since there are no indexes — RECON.md §12), and the SQL is harder to read than
+since there are no indexes — recon.md §12), and the SQL is harder to read than
 `date('now','-7 day')`. The anchor also shifts if the dataset is extended, so two runs on
 different data are not comparable without reading the stated anchor.
 **Where it lives:** `src/config.py:DATE_ANCHOR_MODE`, applied in `src/llm/prompts.py` (schema
@@ -36,7 +36,7 @@ card preamble) and asserted in `tests/test_sql_questions.py`.
 **Context:** The assignment requires detecting "a ticket referencing a module the customer
 doesn't actually have active". The obvious implementation is
 `ticket.product_area not in customer.modules_active`. Run against the real data that flags
-**58 of 85 tickets** (RECON.md §8), which is not a detector, it is noise. The cause: the two
+**58 of 85 tickets** (recon.md §8), which is not a detector, it is noise. The cause: the two
 fields are different vocabularies. `product_area` has `billing`, `integration`, `login_access`,
 `reporting`; `modules_active` has `invoicing`, `analytics`, `customer_portal`, `driver_app`,
 `route_builder`. They share only `dispatch`, `pricing`, `tank_monitor`.
@@ -53,7 +53,7 @@ employee can correct it, not buried in a prompt.
 `billing→invoicing` and `reporting→analytics` are judgement calls a FleetPanda PM might reject.
 It is also a hardcoded mapping that goes stale when a module is renamed. Both are why it lives
 in `config.py` with a comment rather than in the detection function. Logged for human review as
-OPEN_QUESTIONS.md Q-002.
+open-questions.md Q-002.
 **Where it lives:** `src/config.py:AREA_TO_MODULE` / `UNGATED_PRODUCT_AREAS`, consumed by
 `src/agent/escalation.py:detect_module_mismatch`.
 
@@ -62,7 +62,7 @@ OPEN_QUESTIONS.md Q-002.
 ### D-003 · The resolver gates on candidate count, not on match score
 **Date:** 2026-08-28
 **Context:** CLAUDE.md §3.5 requires entity resolution to fail closed. The natural reading is
-"accept the top fuzzy match if its score clears a threshold". Recon (RECON.md §6) shows that is
+"accept the top fuzzy match if its score clears a threshold". Recon (recon.md §6) shows that is
 unsafe with `rapidfuzz.fuzz.token_set_ratio`, which scores a **subset** of tokens as a perfect
 100: the probe `"Fuel"` scores 100 against both Cascade Fuel Services (t1) and Great Lakes Fuel
 Co (t5); `"Energy"` scores 100 against t3, t7 **and** t12. A top-score resolver answers `"Fuel"`
@@ -83,7 +83,7 @@ Fuel Services or Great Lakes Fuel Co?".
 typing just `"Fuel"` gets a clarifying question rather than an answer. In a multi-tenant SOC 2
 system that is the correct direction to be wrong in, but it does cost a conversational turn.
 **Where it lives:** `src/data/resolver.py:TenantResolver.resolve`, seeded from the probe table
-in RECON.md §6 into `tests/test_entity_resolution.py`.
+in recon.md §6 into `tests/test_entity_resolution.py`.
 
 ---
 
@@ -511,7 +511,7 @@ and returns ~0.65 where the truth is ~0.92, with no error and no null in the out
 
 **DQ-5 · Two vocabularies describe the same product surface.**
 Tickets use `product_area`, customers use `modules_active`, and they share only 3 of 9 literals
-(RECON.md §8). Surfaced by set-differencing the two columns. *Production:* one canonical
+(recon.md §8). Surfaced by set-differencing the two columns. *Production:* one canonical
 capability taxonomy with the ticket form constrained to it; failing that, an owned mapping
 table with a test that fails when either vocabulary gains a term the map does not cover.
 
@@ -524,7 +524,7 @@ module-mismatch detection.
 
 **DQ-7 · 37 of 85 tickets have a null `resolution`, and `closed` does not imply resolved.**
 Tenant 4's `TankLink` cluster contains a ticket closed on 2026-04-24 and refiled twice after
-(RECON.md §9). Surfaced by grouping identical subjects within a tenant. *Production:* duplicate
+(recon.md §9). Surfaced by grouping identical subjects within a tenant. *Production:* duplicate
 detection must not treat `status='closed'` as terminal, and reopen-rate is a churn signal worth
 computing.
 
@@ -658,7 +658,7 @@ That is **75M+ rows** in `delivery_orders` against 9,769 today — a 7,700× inc
 ### What breaks, in the order it breaks
 
 1. **The absence of indexes.** There is not one index on any table, including on
-   `tenant_id` (RECON.md §12). Every query is a full scan. At 9,769 rows that is
+   `tenant_id` (recon.md §12). Every query is a full scan. At 9,769 rows that is
    sub-millisecond and invisible; at 75M it is the whole problem, and it arrives
    before anything else on this list.
 
@@ -698,7 +698,7 @@ That is **75M+ rows** in `delivery_orders` against 9,769 today — a 7,700× inc
 Application-layer AST rewriting is the right control for *this* build — it is
 testable, portable, and it caught real bugs. At 150 tenants it should become a
 second line of defence rather than the only one, because it depends on `sqlglot`
-parsing SQLite exactly as SQLite executes it (SECURITY.md, residual risk).
+parsing SQLite exactly as SQLite executes it (security-review.md, residual risk).
 
 Concretely, on Postgres:
 
@@ -1039,7 +1039,7 @@ email domain) through `TenantResolver`.
 B — take the tenant from the bound session, and refuse to triage a paste in an
 unscoped platform session.
 C — take it from the session when bound, fall back to parsing the text when not.
-**Chosen:** B. A is the caller-supplied `tenant_id` vulnerability from SECURITY.md
+**Chosen:** B. A is the caller-supplied `tenant_id` vulnerability from security-review.md
 V1 arriving through a different door: a rep scoped to tenant 4 could assemble a
 brief about tenant 7 by typing one line, and every downstream layer would behave
 correctly while doing it — the guard would inject `tenant_id = 7` faithfully,

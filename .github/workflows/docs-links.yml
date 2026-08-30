@@ -1,0 +1,20 @@
+name: docs-links
+
+# Fail the build on a broken relative markdown link, so the docs cannot drift
+# out of sync with each other (or with a renamed/moved file) unnoticed.
+
+on:
+  push:
+    paths: ["**/*.md", ".github/check_doc_links.py", ".github/workflows/docs-links.yml"]
+  pull_request:
+    paths: ["**/*.md", ".github/check_doc_links.py", ".github/workflows/docs-links.yml"]
+
+jobs:
+  check-links:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python3 .github/check_doc_links.py

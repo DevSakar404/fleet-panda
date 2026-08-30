@@ -1,6 +1,6 @@
 # Spec — SQL Dispatch Agent
 
-← [README](../../README.md) · [Architecture decisions](../architecture_decisions.md) · Sibling specs: [tenant isolation](tenant_isolation_spec.md) · [ticket triage](ticket_triage_agent_spec.md) · [entity resolution](entity_resolution_and_routing_spec.md) · [voice interface](voice_interface_spec.md)
+← [README](../../README.md) · [Architecture decisions](../explanation/architecture-decisions.md) · Sibling specs: [tenant isolation](tenant-isolation.md) · [ticket triage](ticket-triage.md) · [entity resolution](entity-resolution.md) · [voice interface](voice-interface.md)
 
 **Status:** implemented and tested (`tests/test_sql_agent.py`, `tests/test_sql_questions.py`). The SQL Dispatch Agent translates natural language operational questions into guarded SQLite queries and synthesises formatted answers for chat and voice interfaces.
 
@@ -146,8 +146,8 @@ for attempt in range(1, config.SQL_MAX_ATTEMPTS + 1):
 
 The SQL Agent delegates all execution and AST modifications to lower layers to maintain strict separation of concerns:
 
-- **Security & Rewrite:** Detailed in [Multi-Tenant Isolation Spec](tenant_isolation_spec.md). `SqlGuard` (Layer 2) parses AST via `sqlglot` and injects `tenant_id` filters.
-- **Execution & Isolation Check:** `QueryExecutor` (Layer 3) runs queries against read-only SQLite connections ([Layer 1](tenant_isolation_spec.md#L3-layer-isolation-model)) with timeouts, row caps (`config.SQL_ROW_LIMIT = 50`), and asserts no foreign `tenant_id` is present in results.
+- **Security & Rewrite:** Detailed in [Multi-Tenant Isolation Spec](tenant-isolation.md). `SqlGuard` (Layer 2) parses AST via `sqlglot` and injects `tenant_id` filters.
+- **Execution & Isolation Check:** `QueryExecutor` (Layer 3) runs queries against read-only SQLite connections ([Layer 1](tenant-isolation.md#L3-layer-isolation-model)) with timeouts, row caps (`config.SQL_ROW_LIMIT = 50`), and asserts no foreign `tenant_id` is present in results.
 
 ---
 

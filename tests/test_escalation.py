@@ -22,7 +22,7 @@ from src.agent.escalation import (
 
 TODAY = date(2026, 8, 29)
 
-# Real decline percentages from RECON.md section 11, keyed by tenant.
+# Real decline percentages from recon.md section 11, keyed by tenant.
 DECLINE = {1: -1.5, 2: -5.8, 3: -3.7, 4: -16.3, 5: 2.1, 6: 0.7,
            7: 0.4, 8: -14.2, 9: -14.0, 10: 4.5, 11: 27.4, 12: -11.3}
 
@@ -115,7 +115,7 @@ def test_a_ticket_is_not_its_own_duplicate(repository):
 # --- the three mandated triage cases ------------------------------------------
 
 def test_ticket_1083_is_all_three_test_cases_at_once(repository):
-    """RECON.md section 9: #1083 is simultaneously the low-health/expiring-contract
+    """recon.md section 9: #1083 is simultaneously the low-health/expiring-contract
     case, the duplicate case, and the module-not-active case."""
     result = assess(repository, 1083)
 

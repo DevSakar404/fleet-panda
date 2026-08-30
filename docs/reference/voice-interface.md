@@ -1,8 +1,8 @@
 # Spec — Voice Interface & Speech Pipeline
 
-← [README](../../README.md) · [Architecture decisions](../architecture_decisions.md) · Sibling specs: [tenant isolation](tenant_isolation_spec.md) · [SQL agent](sql_agent_spec.md) · [ticket triage](ticket_triage_agent_spec.md) · [entity resolution](entity_resolution_and_routing_spec.md)
+← [README](../../README.md) · [Architecture decisions](../explanation/architecture-decisions.md) · Sibling specs: [tenant isolation](tenant-isolation.md) · [SQL agent](sql-agent.md) · [ticket triage](ticket-triage.md) · [entity resolution](entity-resolution.md)
 
-**Status:** implemented and tested (`tests/test_voice.py`). The Voice transport provides an audio interface sharing the identical agent core as the CLI chat, with specialized rendering rules for the ear. Latency and recognition were tuned in a later pass (see [D-026](../../DECISIONS.md)): the Whisper decoder is primed with domain vocabulary, TTS is streamed sentence by sentence, and an offline macOS `say` fallback lets the loop run without an API key.
+**Status:** implemented and tested (`tests/test_voice.py`). The Voice transport provides an audio interface sharing the identical agent core as the CLI chat, with specialized rendering rules for the ear. Latency and recognition were tuned in a later pass (see [D-026](../explanation/decisions-log.md)): the Whisper decoder is primed with domain vocabulary, TTS is streamed sentence by sentence, and an offline macOS `say` fallback lets the loop run without an API key.
 
 ---
 
@@ -25,7 +25,7 @@ When `OPENAI_API_KEY` is absent (or a synthesis call fails), the transport drops
 ### Turn Lifecycle
 
 1. **Input (`_listen`)**:
-   - Online: push-to-talk recording (`record_until_enter`) captures 16 kHz mono PCM until the user presses Enter — chosen over silence detection to eliminate false cut-offs in noisy rooms ([D-020](../../DECISIONS.md)).
+   - Online: push-to-talk recording (`record_until_enter`) captures 16 kHz mono PCM until the user presses Enter — chosen over silence detection to eliminate false cut-offs in noisy rooms ([D-020](../explanation/decisions-log.md)).
    - Offline: the turn is typed at the prompt. Both paths end in `normalize_transcript`, so nothing downstream can tell how the words arrived.
 2. **Transcription (`transcribe`)**:
    - Sends the WAV to OpenAI Whisper with `language="en"` pinned and an `initial_prompt` built from tenant names, aliases, and domain jargon — priming the decoder to emit "CFS"/"TankLink" correctly at the source (see §4).
@@ -75,9 +75,9 @@ Speech-to-text reliably damages our short, structured inputs; each repair is del
 
 ---
 
-## 4. Latency & Recognition ([D-026](../../DECISIONS.md))
+## 4. Latency & Recognition ([D-026](../explanation/decisions-log.md))
 
-The transport is deliberately **not** a three-agent streaming pipeline ([D-019](../../DECISIONS.md)); only the one stage that overlaps was optimized.
+The transport is deliberately **not** a three-agent streaming pipeline ([D-019](../explanation/decisions-log.md)); only the one stage that overlaps was optimized.
 
 - **Domain-primed Whisper (`_build_speech_prompt`):** the `initial_prompt` is assembled at startup from `load_tenants()` + `load_tenant_aliases()` + `config.SPEECH_PROMPT_JARGON`, so a new tenant or alias needs no code edit. Terms are ordered names → aliases → jargon so the acronyms most likely to be misheard survive Whisper's ~224-token prompt truncation.
 - **Sentence-streamed TTS (`SpeechClient._speak_streaming`):** a bounded producer thread synthesizes the next sentence while the current one plays. Time-to-first-audio becomes the cost of the first sentence (~0.4–0.6 s) instead of the whole answer (~1.5–2.5 s on a brief). A synthesis failure mid-answer is carried back and degrades to `say`.

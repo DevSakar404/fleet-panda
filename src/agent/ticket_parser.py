@@ -19,7 +19,7 @@ where someone can see it.
 What this module deliberately does NOT do is decide the tenant. A pasted body can
 claim to be from any company; honouring that would let a scoped rep build a brief
 for a different customer by typing one line, which is the caller-supplied
-`tenant_id` hole from SECURITY.md V1 wearing a different hat. The tenant is passed
+`tenant_id` hole from security-review.md V1 wearing a different hat. The tenant is passed
 in by `router.py` from the bound session, and there is no code path here that
 reads one out of the text.
 """

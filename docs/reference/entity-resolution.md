@@ -1,6 +1,6 @@
 # Spec — Entity Resolution & Request Routing
 
-← [README](../../README.md) · [Architecture decisions](../architecture_decisions.md) · Sibling specs: [tenant isolation](tenant_isolation_spec.md) · [SQL agent](sql_agent_spec.md) · [ticket triage](ticket_triage_agent_spec.md)
+← [README](../../README.md) · [Architecture decisions](../explanation/architecture-decisions.md) · Sibling specs: [tenant isolation](tenant-isolation.md) · [SQL agent](sql-agent.md) · [ticket triage](ticket-triage.md)
 
 **Status:** implemented and tested (`tests/test_entity_resolution.py`, `tests/test_router.py`, `tests/test_conversation.py`). This specification defines how natural language tenant names and user utterances are resolved to canonical IDs, gated for human confirmation, and routed to specialized agents.
 
