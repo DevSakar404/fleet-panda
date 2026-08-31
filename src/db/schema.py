@@ -77,9 +77,11 @@ class SchemaCard:
         lines.extend([
             "## Facts that are not visible in the schema",
             "",
-            "- `customers` holds the tenants' END-customers (fuel recipients).",
-            "  It is NOT the list of FleetPanda tenants. A question about "
-            "'customers' of a tenant means rows in this table.",
+            "- `customers` holds the tenants' END-customers (fuel recipients), "
+            "  NOT the FleetPanda fuel distribution tenants. Tenants are represented "
+            "  by `tenant_id` (1 through 12). Any question asking by tenant or for each "
+            "  tenant (such as fill rate or volume per tenant) groups by `tenant_id` and "
+            "  selects `tenant_id`, never `customer_id`.",
             "- `delivery_orders.created_at` is a single constant for every row "
             "(the fixture's generation timestamp). Never use it for date "
             "arithmetic. Use `order_date` or `delivery_date`.",

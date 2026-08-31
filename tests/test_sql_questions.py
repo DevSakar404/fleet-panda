@@ -356,7 +356,12 @@ def test_agent_answers_q7_with_every_tenants_fill_rate():
     assert not answer.refused, answer.refusal_reasons
     assert answer.row_count == 12
 
-    rates = {row[0]: row[1] for row in answer.rows}
+    t_idx = answer.columns.index("tenant_id") if "tenant_id" in answer.columns else 0
+    r_idx = next(
+        (i for i, c in enumerate(answer.columns) if i != t_idx and any(k in c.lower() for k in ("rate", "fill", "gallons", "sum"))),
+        1 if t_idx == 0 else 0,
+    )
+    rates = {row[t_idx]: row[r_idx] for row in answer.rows}
     assert all(0.90 < rate < 0.95 for rate in rates.values())
     best = max(rates, key=rates.get)
     assert best == 3
