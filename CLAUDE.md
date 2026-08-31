@@ -64,7 +64,7 @@ missing into `docs/project/open-questions.md` and report it.
 
 1. **No agent framework.** No LangChain, LlamaIndex, CrewAI, LangGraph. Direct
    provider SDK calls only. This is a deliberate decision to be defended in
-   docs/explanation/decisions-log.md — frameworks hide the prompts and control flow that the live
+   `DECISIONS.md` — frameworks hide the prompts and control flow that the live
    session will interrogate.
 2. **Tenant isolation is enforced in code, never by prompt.** A prompt asking the
    model to filter by tenant is not isolation. Enforcement lives in
@@ -79,7 +79,7 @@ missing into `docs/project/open-questions.md` and report it.
 5. **Entity resolution fails closed.** When a tenant name is ambiguous, return
    candidates and ask — never silently pick the best fuzzy match.
 6. **Small files.** Target 100–300 lines. If a file passes ~350 lines, split it
-   along a real seam and say why in docs/explanation/decisions-log.md.
+   along a real seam and say why in `DECISIONS.md`.
 7. **Two registries are load-bearing** (see `src/data/sources.py` and the tool
    registry): adding a data source or a capability must not require editing
    agent logic.
@@ -94,11 +94,13 @@ Create exactly this. Do not invent additional top-level directories.
 .
 ├── CLAUDE.md
 ├── README.md              # entry point + the documentation index
+├── DECISIONS.md           # engineering decision journal (D-001 to D-026, scaling, cost model)
+├── SECURITY.md            # code review challenge & vulnerability audit
 ├── requirements.txt
 ├── .env.example
 ├── docs/                  # all project docs, Diátaxis split (see section 10)
-│   ├── reference/         # what it is: the five feature specs + design.md
-│   ├── explanation/       # why: architecture-decisions.md, decisions-log.md, recon.md, security-review.md
+│   ├── reference/         # what it is: the five feature specs + design.md + architecture-and-er-diagrams.md
+│   ├── explanation/       # why: architecture-decisions.md, recon.md
 │   ├── how-to/            # tasks: run-locally.md
 │   └── project/           # meta: open-questions.md, handoff.md, assignment.md
 ├── data/                  # provided data files (read-only, never modified)
@@ -157,7 +159,7 @@ Create exactly this. Do not invent additional top-level directories.
 
 ## 6. Decision-log protocol
 
-`docs/explanation/decisions-log.md` is an engineering journal, not an essay written at the end. Append
+`DECISIONS.md` is an engineering journal, not an essay written at the end. Append
 an entry **at the moment a real decision is made**, in this format:
 
 ```markdown
@@ -194,7 +196,7 @@ updated every session.
 | Session | `agent/session.py` | `TenantContext`: TENANT or PLATFORM. Questions 1, 2, 7 and 8 are cross-tenant and are refused when scoped. |
 | Agent | `agent/{sql_agent,escalation,triage_agent,router}.py` | Two LLM calls per question (D-007); escalation is pure Python (D-010, D-012); triage fans in five sources. |
 | Transport | `interfaces/{cli_chat,voice_chat}.py`, `interfaces/speech.py` | Chat runs without an API key — triage, scoping and every refusal path are deterministic. Voice is push-to-talk (`whisper-1` in, `tts-1` out) over the shared `Conversation` core (D-018). |
-| Docs | `docs/explanation/recon.md`, `docs/reference/design.md`, `docs/explanation/decisions-log.md`, `docs/explanation/security-review.md`, `docs/project/open-questions.md` | Every assignment deliverable is written, voice included. |
+| Docs | `docs/explanation/recon.md`, `docs/reference/design.md`, `DECISIONS.md`, `SECURITY.md`, `docs/project/open-questions.md` | Every assignment deliverable is written, voice included. |
 
 **No stubs remain. 310 tests pass.** The eight graded questions are asserted twice:
 against hand-written reference SQL, and end to end through the agent.
@@ -245,7 +247,7 @@ entries that explain why each is shaped as it is.
 - **When you change a feature's behavior, update its spec in `docs/reference/` in
   the same change** — the spec is a deliverable, not a snapshot. The map from
   code to spec is in section 10; if an edit crosses a feature boundary, update
-  every spec it touches, and log a genuinely contested choice in `docs/explanation/decisions-log.md`.
+   every spec it touches, and log a genuinely contested choice in `DECISIONS.md`.
   A spec that disagrees with the code is worse than no spec: the live session
   reads from it.
 - **After editing or moving any doc, run `python3 .github/check_doc_links.py`** —
@@ -295,7 +297,7 @@ Each feature has a living spec under `docs/reference/`. These are what the live
 session reads from and points at, so they must track the code (section 8). When
 you touch the code in the left column, update the spec in the right column in the
 same change. `docs/reference/design.md` is the system-wide overview; `docs/explanation/architecture-decisions.md`
-and `docs/explanation/decisions-log.md` carry the *why* behind contested choices.
+and `DECISIONS.md` carry the *why* behind contested choices.
 
 | Feature / code | Spec to keep in sync |
 |---|---|

@@ -103,7 +103,7 @@ bodies, each of which is its own scope:
 verdict = guard.check(sql, TenantContext.for_tenant(tenant_id))
 ```
 
-Implemented at [`src/db/guard.py`](../../src/db/guard.py) (`_inject_tenant_predicates`).
+Implemented at [`src/db/guard.py`](src/db/guard.py) (`_inject_tenant_predicates`).
 Two properties are worth calling out:
 
 - A caller-supplied `WHERE tenant_id = 7` is **ANDed, not replaced**, so a
@@ -180,7 +180,7 @@ Three independent layers, each of which holds if the others fail:
    connection.execute("PRAGMA query_only = ON;")
    ```
 
-   [`src/db/connection.py`](../../src/db/connection.py).
+   [`src/db/connection.py`](src/db/connection.py).
 
 2. **Validate the AST before execution.** Parse with `sqlglot`; reject anything
    that is not exactly one `SELECT`; reject `INSERT`/`UPDATE`/`DELETE`/`DROP`/
@@ -191,14 +191,14 @@ Three independent layers, each of which holds if the others fail:
    from schema introspection; reject cross-database references; force a `LIMIT`.
    Use `sqlglot.parse()` and **count the statements** — `parse_one()` silently
    keeps only the first, so a multi-statement payload would validate as a clean
-   `SELECT`. [`src/db/guard.py`](../../src/db/guard.py).
+   `SELECT`. [`src/db/guard.py`](src/db/guard.py).
 
 3. **Assert on the rows that came back.** After execution, check that no returned
    row carries a foreign `tenant_id`. This is the only layer that can catch a bug
    in layer 2 — and it earned its place: a `sqlglot` minor-version rename of the
    `Select` node's `from` argument to `from_` silently disabled predicate injection
    during this build, producing syntactically perfect, entirely unfiltered SQL.
-   [`src/db/executor.py`](../../src/db/executor.py).
+   [`src/db/executor.py`](src/db/executor.py).
 
 Note the honest limit on layer 3: it can only inspect rows it received, so a leak
 whose first 200 rows happen to belong to the bound tenant passes it. It is a smoke
@@ -265,7 +265,7 @@ prompt says the opposite of the vulnerable one:
 
 One predicate, from one place, that we control. A model-written filter would be
 redundant when right and invisible when wrong.
-[`src/llm/prompts.py`](../../src/llm/prompts.py).
+[`src/llm/prompts.py`](src/llm/prompts.py).
 
 **Separate untrusted input from instructions.** Put the question in its own user
 message rather than interpolating it into the system prompt, so instructions and

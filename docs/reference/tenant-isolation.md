@@ -301,7 +301,7 @@ triaging a ticket that belongs to another tenant gets the *same* "I can't find
 ticket #N" message as a genuinely missing ticket. Distinguishing them turned the
 tool into an enumeration oracle — ticket ids are sequential four-digit integers,
 so a scoped user could map every id in use across the platform by sorting replies
-into "refused" and "not found" (F3 in [security-review.md](../explanation/security-review.md)).
+into "refused" and "not found" (F3 in [security-review.md](../../SECURITY.md)).
 
 ---
 
@@ -379,7 +379,7 @@ SQL half.
 This section states how the guarantee maps onto FastAPI, because the isolation
 core (`TenantContext` → `SqlGuard` → `QueryExecutor`) is transport-agnostic by
 design and would be reused unchanged. The worked version, with the three
-vulnerabilities it closes, is in [security-review.md](../explanation/security-review.md).
+vulnerabilities it closes, is in [security-review.md](../../SECURITY.md).
 
 ```python
 from fastapi import Depends, FastAPI, HTTPException
@@ -424,6 +424,6 @@ Rules for the service boundary:
 | File | Asserts |
 |---|---|
 | `tests/test_tenant_isolation.py` (15) | A tenant-A query never returns tenant-B rows; predicates injected into subqueries, derived tables, CTE bodies; the **deliberately-bypassed-guard** test that proves layers 1 and 3 still hold; layer 3 is a detector, not a guarantee |
-| `tests/test_security.py` (18) | The three [security-review.md](../explanation/security-review.md) fixes; guard rejections — multi-statement, non-SELECT, `sqlite_*`, off-allowlist, `ATTACH`/`PRAGMA` via `Command`, cross-database |
+| `tests/test_security.py` (18) | The three [security-review.md](../../SECURITY.md) fixes; guard rejections — multi-statement, non-SELECT, `sqlite_*`, off-allowlist, `ATTACH`/`PRAGMA` via `Command`, cross-database |
 | `tests/test_entity_resolution.py` (10) | The cascade; fuzzy gate on candidate *count* not score; refusal on ambiguity; the nearest-suggestion floor |
 | `tests/test_conversation.py` (14) | Scope transitions; the confirmation gate binds only on an affirmative and cancels on anything else |

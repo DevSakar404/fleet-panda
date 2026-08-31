@@ -108,11 +108,11 @@ journey
 
 The design decisions visualized above map to the following foundational engineering records:
 
-- **[D-001](../explanation/decisions-log.md#D-001)**: Dynamic Schema Introspection & Temporal Anchor (`2026-05-29`). Prevents `date('now')` returning empty result sets against historical snapshots.
-- **[D-003](../explanation/decisions-log.md#D-003)**: Candidate Count Gating for Entity Resolution. Protects against subset token scoring leaks (`"Fuel"` probe).
-- **[D-004](../explanation/decisions-log.md#D-004)**: AST Injection for Multi-Tenant Isolation via `sqlglot`.
-- **[D-007](../explanation/decisions-log.md#D-007)**: Two-Call LLM Split. Separation of creative query generation from strict, zero-math prose synthesis.
-- **[D-010](../explanation/decisions-log.md#D-010)**: Deterministic Escalation Scoring in Pure Python.
-- **[D-012](../explanation/decisions-log.md#D-012)**: 55-Point Account Risk Cap. Ensures struggling accounts alone top out at `URGENT`, requiring ticket-specific urgency for `CRITICAL`.
-- **[D-018](../explanation/decisions-log.md#D-018)**: Shared Multi-Turn `Conversation` Session Kernel across CLI and Voice.
-- **[D-022](../explanation/decisions-log.md#D-022)**: Pasted Ticket Routing with Session Scope Binding (Prevents spoofed company header escalation).
+- **[D-001](../../DECISIONS.md#D-001)**: Dynamic Schema Introspection & Temporal Anchor (`2026-05-29`). Prevents `date('now')` returning empty result sets against historical snapshots.
+- **[D-003](../../DECISIONS.md#D-003)**: Candidate Count Gating for Entity Resolution. Protects against subset token scoring leaks (`"Fuel"` probe).
+- **[D-004](../../DECISIONS.md#D-004)**: AST Injection for Multi-Tenant Isolation via `sqlglot`.
+- **[D-007](../../DECISIONS.md#D-007)**: Two-Call LLM Split. Separation of creative query generation from strict, zero-math prose synthesis.
+- **[D-010](../../DECISIONS.md#D-010)**: Deterministic Escalation Scoring in Pure Python.
+- **[D-012](../../DECISIONS.md#D-012)**: 55-Point Account Risk Cap. Ensures struggling accounts alone top out at `URGENT`, requiring ticket-specific urgency for `CRITICAL`.
+- **[D-018](../../DECISIONS.md#D-018)**: Shared Multi-Turn `Conversation` Session Kernel across CLI and Voice.
+- **[D-022](../../DECISIONS.md#D-022)**: Pasted Ticket Routing with Session Scope Binding (Prevents spoofed company header escalation).

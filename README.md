@@ -144,14 +144,14 @@ This documentation is modular (hub-and-spoke, following the
 | [docs/reference/architecture-and-er-diagrams.md](docs/reference/architecture-and-er-diagrams.md) | Reference | Complete end-to-end visual architecture flowchart, entity-relationship (ER) diagrams for SQLite & JSON planes, 3-layer isolation diagrams, and full LLM call inventory. |
 | [docs/reference/design.md](docs/reference/design.md) | Reference | Request-flow diagrams and module boundaries. |
 | [docs/how-to/run-locally.md](docs/how-to/run-locally.md) | How-to | Run chat, voice, and offline mode; run the test suite. |
-| [docs/explanation/security-review.md](docs/explanation/security-review.md) | Explanation | Code-review challenge: three vulnerabilities in a sample text-to-SQL endpoint, each with an attack scenario and the implemented fix. |
+| [SECURITY.md](SECURITY.md) | Explanation | Code-review challenge: three vulnerabilities in a sample text-to-SQL endpoint, each with an attack scenario and the implemented fix. |
 | [docs/project/handoff.md](docs/project/handoff.md) | Project / status | What is complete, what is pending, and the known edge cases and limitations. |
 
 ### Supporting deliverables (assignment context, retained)
 
 | Document | What it is |
 |---|---|
-| [docs/explanation/decisions-log.md](docs/explanation/decisions-log.md) | The dated engineering journal (the D-NNN entries), plus the cost model, the 150-tenant scaling answer, and the end-customer-agent answer. The narrative digest of it is [architecture-decisions.md](docs/explanation/architecture-decisions.md). |
+| [DECISIONS.md](DECISIONS.md) | The dated engineering journal (the D-NNN entries), plus the cost model, the 150-tenant scaling answer, and the end-customer-agent answer. The narrative digest of it is [architecture-decisions.md](docs/explanation/architecture-decisions.md). |
 | [docs/explanation/recon.md](docs/explanation/recon.md) | Step 0 data exploration. Explains most of the design. |
 | [docs/project/open-questions.md](docs/project/open-questions.md) | The state ledger: session summary and questions that need a human. |
 | [docs/project/assignment.md](docs/project/assignment.md) | The original take-home brief (verbatim), retained for grading context. |
