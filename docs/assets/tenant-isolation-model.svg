@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 650" width="100%" height="100%" style="background:#0f172a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+  <defs>
+    <linearGradient id="l1-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#065f46"/>
+      <stop offset="100%" stop-color="#047857"/>
+    </linearGradient>
+    <linearGradient id="l2-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e3a8a"/>
+      <stop offset="100%" stop-color="#1d4ed8"/>
+    </linearGradient>
+    <linearGradient id="l3-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#701a75"/>
+      <stop offset="100%" stop-color="#86198f"/>
+    </linearGradient>
+    <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 8 5 L 0 9 z" fill="#38bdf8"/>
+    </marker>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="115%">
+      <feDropShadow dx="0" dy="4" stdDeviation="5" flood-color="#000000" flood-opacity="0.4"/>
+    </filter>
+  </defs>
+
+  <!-- Title -->
+  <text x="500" y="40" text-anchor="middle" fill="#f8fafc" font-size="22" font-weight="700">FleetPanda — 3-Layer Tenant Isolation Security Model</text>
+  <text x="500" y="65" text-anchor="middle" fill="#94a3b8" font-size="13">Each layer assumes the others can fail · Defense-in-depth</text>
+
+  <!-- Layer 2: AST Guard (First Gate for SQL) -->
+  <g transform="translate(100, 100)" filter="url(#shadow)">
+    <rect width="800" height="130" rx="10" fill="#1e293b" stroke="#3b82f6" stroke-width="2"/>
+    <rect width="800" height="35" rx="10" fill="url(#l2-grad)"/>
+    <text x="20" y="24" fill="#ffffff" font-size="14" font-weight="700">LAYER 2 · AST Query Guard (src/db/guard.py — sqlglot)</text>
+    <text x="20" y="60" fill="#e2e8f0" font-size="12">1. Validates statement shape: Only exp.Select allowed; blocks exp.Command (PRAGMA/ATTACH/VACUUM).</text>
+    <text x="20" y="80" fill="#e2e8f0" font-size="12">2. Walks all SELECT scopes (outer, CTEs, subqueries) &amp; injects 'WHERE tenant_id = N' on FROM/JOIN tables.</text>
+    <text x="20" y="100" fill="#e2e8f0" font-size="12">3. Enforces hard row limit: Clamps query LIMIT to MAX_RESULT_ROWS (200).</text>
+    <text x="640" y="120" fill="#93c5fd" font-size="11" font-weight="600">Acts BEFORE Execution</text>
+  </g>
+
+  <!-- Arrow -->
+  <path d="M 500 230 L 500 270" fill="none" stroke="#38bdf8" stroke-width="2.5" marker-end="url(#arrow)"/>
+
+  <!-- Layer 1: Read-Only Connection -->
+  <g transform="translate(100, 275)" filter="url(#shadow)">
+    <rect width="800" height="120" rx="10" fill="#1e293b" stroke="#10b981" stroke-width="2"/>
+    <rect width="800" height="35" rx="10" fill="url(#l1-grad)"/>
+    <text x="20" y="24" fill="#ffffff" font-size="14" font-weight="700">LAYER 1 · Read-Only Connection (src/db/connection.py — SQLite / OS Layer)</text>
+    <text x="20" y="60" fill="#e2e8f0" font-size="12">1. URI parameter 'file:dispatch.db?mode=ro' opens database read-only at the OS VFS level.</text>
+    <text x="20" y="80" fill="#e2e8f0" font-size="12">2. 'PRAGMA query_only = ON' locks SQLite engine against all write / modification commands.</text>
+    <text x="20" y="100" fill="#a7f3d0" font-size="11">Blocks any write or injection even if the AST Guard were completely bypassed.</text>
+    <text x="635" y="112" fill="#a7f3d0" font-size="11" font-weight="600">Enforced by SQLite Kernel</text>
+  </g>
+
+  <!-- Arrow -->
+  <path d="M 500 395 L 500 435" fill="none" stroke="#38bdf8" stroke-width="2.5" marker-end="url(#arrow)"/>
+
+  <!-- Layer 3: Post-Execution Row Assertion -->
+  <g transform="translate(100, 440)" filter="url(#shadow)">
+    <rect width="800" height="125" rx="10" fill="#1e293b" stroke="#c026d3" stroke-width="2"/>
+    <rect width="800" height="35" rx="10" fill="url(#l3-grad)"/>
+    <text x="20" y="24" fill="#ffffff" font-size="14" font-weight="700">LAYER 3 · Post-Execution Row Assertion (src/db/executor.py — Runtime Verification)</text>
+    <text x="20" y="60" fill="#e2e8f0" font-size="12">1. Inspects the columns of the returned dataset for 'tenant_id'.</text>
+    <text x="20" y="80" fill="#e2e8f0" font-size="12">2. Asserts that EVERY returned row has row['tenant_id'] == bound session tenant_id.</text>
+    <text x="20" y="100" fill="#f5d0fe" font-size="11">Catches AST rewrite defects (e.g. bad alias binding or missed subquery scopes) on real data.</text>
+    <text x="645" y="117" fill="#f5d0fe" font-size="11" font-weight="600">Acts AFTER Execution</text>
+  </g>
+
+  <!-- Success Output -->
+  <path d="M 500 565 L 500 595" fill="none" stroke="#38bdf8" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <rect x="360" y="595" width="280" height="35" rx="6" fill="#0369a1"/>
+  <text x="500" y="618" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="700">Verified Rows handed to LLM Synthesis</text>
+</svg>

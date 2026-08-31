@@ -16,6 +16,8 @@ Chat and voice are transports. Everything below `route()` is shared, which is wh
 makes "same intelligence in both modes" a structural property rather than a
 promise (CLAUDE.md §2).
 
+> **Visual Diagram Asset:** See the full vector visual architecture and ER models in [`docs/reference/architecture-and-er-diagrams.md`](architecture-and-er-diagrams.md) and [`docs/assets/system-architecture.svg`](../assets/system-architecture.svg).
+
 ```mermaid
 graph TD
     CHAT[cli_chat.py<br/>renders for the eye] --> CONV

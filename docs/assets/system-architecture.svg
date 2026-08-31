@@ -1,0 +1,294 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1500 1350" width="100%" height="100%" style="background:#0b0f19; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+  <defs>
+    <!-- Gradients -->
+    <linearGradient id="user-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2563eb"/>
+      <stop offset="100%" stop-color="#1d4ed8"/>
+    </linearGradient>
+    <linearGradient id="transport-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e293b"/>
+      <stop offset="100%" stop-color="#334155"/>
+    </linearGradient>
+    <linearGradient id="session-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e1b4b"/>
+      <stop offset="100%" stop-color="#312e81"/>
+    </linearGradient>
+    <linearGradient id="sql-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#064e3b"/>
+      <stop offset="100%" stop-color="#065f46"/>
+    </linearGradient>
+    <linearGradient id="triage-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#701a75"/>
+      <stop offset="100%" stop-color="#86198f"/>
+    </linearGradient>
+    <linearGradient id="llm-badge-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f59e0b"/>
+      <stop offset="100%" stop-color="#d97706"/>
+    </linearGradient>
+    <linearGradient id="pure-badge-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#10b981"/>
+      <stop offset="100%" stop-color="#059669"/>
+    </linearGradient>
+
+    <!-- Clean Markers with proper sizing and centering -->
+    <marker id="arr-blue" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#38bdf8"/>
+    </marker>
+    <marker id="arr-green" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#34d399"/>
+    </marker>
+    <marker id="arr-purple" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#e879f9"/>
+    </marker>
+
+    <!-- Drop Shadow Filter -->
+    <filter id="box-shadow" x="-2%" y="-2%" width="104%" height="108%" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="4" stdDeviation="5" flood-color="#000000" flood-opacity="0.4"/>
+    </filter>
+  </defs>
+
+  <!-- ========================================================================= -->
+  <!-- HEADER & CLEAN LEGEND (NO OVERLAP) -->
+  <!-- ========================================================================= -->
+  <text x="50" y="42" fill="#f8fafc" font-size="22" font-weight="700">FleetPanda AI System — End-to-End User Journey &amp; Architecture</text>
+  <text x="50" y="66" fill="#94a3b8" font-size="13">Complete interaction lifecycle with explicit LLM model calls and pure deterministic Python stages</text>
+
+  <!-- Badges placed safely on top right without colliding with title -->
+  <g transform="translate(1080, 22)">
+    <rect width="180" height="26" rx="6" fill="url(#llm-badge-grad)"/>
+    <text x="90" y="17" text-anchor="middle" fill="#ffffff" font-size="11" font-weight="700">⚡ LLM / AI API CALL</text>
+  </g>
+  <g transform="translate(1275, 22)">
+    <rect width="175" height="26" rx="6" fill="url(#pure-badge-grad)"/>
+    <text x="87" y="17" text-anchor="middle" fill="#ffffff" font-size="11" font-weight="700">🔒 100% PURE PYTHON</text>
+  </g>
+
+  <!-- ========================================================================= -->
+  <!-- STAGE 0: USER ENTRY POINT -->
+  <!-- ========================================================================= -->
+  <g transform="translate(50, 95)" filter="url(#box-shadow)">
+    <rect width="1400" height="70" rx="10" fill="#1e293b" stroke="#3b82f6" stroke-width="1.5"/>
+    <rect x="15" y="15" width="130" height="22" rx="4" fill="url(#user-grad)"/>
+    <text x="80" y="30" text-anchor="middle" fill="#ffffff" font-size="11" font-weight="700">USER ACTION</text>
+    
+    <text x="160" y="31" fill="#f8fafc" font-size="14" font-weight="600">User initiates an interaction:</text>
+    <text x="160" y="52" fill="#cbd5e1" font-size="12">1. Scope command (`use CFS` / `platform`)  |  2. Dispatch Question (`How many deliveries...`)  |  3. Ticket Triage (`triage 1083` / pasted ticket)</text>
+    <text x="1170" y="42" fill="#38bdf8" font-size="13" font-weight="600">⌨️ Keyboard OR 🎙️ Voice</text>
+  </g>
+
+  <!-- Flow Arrow: Stage 0 -> Stage 1 -->
+  <path d="M 750 165 L 750 195" fill="none" stroke="#38bdf8" stroke-width="2.5" marker-end="url(#arr-blue)"/>
+
+  <!-- ========================================================================= -->
+  <!-- STAGE 1: TRANSPORT LAYER -->
+  <!-- ========================================================================= -->
+  <g transform="translate(50, 200)" filter="url(#box-shadow)">
+    <rect width="1400" height="130" rx="12" fill="url(#transport-grad)" stroke="#475569" stroke-width="1.5"/>
+    <rect x="20" y="12" width="180" height="22" rx="4" fill="#0284c7"/>
+    <text x="110" y="27" text-anchor="middle" fill="#ffffff" font-size="11" font-weight="700">1 · TRANSPORT LAYER</text>
+    <text x="215" y="27" fill="#94a3b8" font-size="12">Pure rendering adapters · Zero business logic</text>
+
+    <!-- CLI Chat Box -->
+    <rect x="30" y="45" width="620" height="70" rx="8" fill="#0f172a" stroke="#38bdf8" stroke-width="1.2"/>
+    <text x="45" y="68" fill="#38bdf8" font-size="14" font-weight="600">cli_chat.py (Terminal Chat Transport)</text>
+    <text x="45" y="88" fill="#cbd5e1" font-size="12">• Captures typed commands &amp; multi-line ticket pastes</text>
+    <text x="45" y="104" fill="#94a3b8" font-size="11">• Formats full ANSI terminal output, raw SQL queries, &amp; 25-line triage brief tables</text>
+    <rect x="500" y="50" width="140" height="20" rx="4" fill="url(#pure-badge-grad)"/>
+    <text x="570" y="64" text-anchor="middle" fill="#ffffff" font-size="10" font-weight="700">🔒 Pure Python</text>
+
+    <!-- Voice Chat Box -->
+    <rect x="680" y="45" width="690" height="70" rx="8" fill="#0f172a" stroke="#f59e0b" stroke-width="1.5"/>
+    <text x="695" y="68" fill="#fbbf24" font-size="14" font-weight="600">voice_chat.py + speech.py (Voice Transport)</text>
+    <text x="695" y="88" fill="#cbd5e1" font-size="12">• Push-to-talk microphone capture  • normalize_transcript() acronyms &amp; digit commas</text>
+    <text x="695" y="104" fill="#94a3b8" font-size="11">• speakable() transforms ISO dates for natural speech  • Spoken brief cut to level + 2 reasons</text>
+    
+    <rect x="1140" y="50" width="220" height="20" rx="4" fill="url(#llm-badge-grad)"/>
+    <text x="1250" y="64" text-anchor="middle" fill="#ffffff" font-size="10" font-weight="700">⚡ API: Whisper-1 STT</text>
+  </g>
+
+  <!-- Flow Arrow: Stage 1 -> Stage 2 -->
+  <path d="M 750 330 L 750 360" fill="none" stroke="#38bdf8" stroke-width="2.5" marker-end="url(#arr-blue)"/>
+
+  <!-- ========================================================================= -->
+  <!-- STAGE 2: SESSION & ROUTING KERNEL -->
+  <!-- ========================================================================= -->
+  <g transform="translate(50, 365)" filter="url(#box-shadow)">
+    <rect width="1400" height="150" rx="12" fill="url(#session-grad)" stroke="#6366f1" stroke-width="1.5"/>
+    <rect x="20" y="12" width="220" height="22" rx="4" fill="#4f46e5"/>
+    <text x="130" y="27" text-anchor="middle" fill="#ffffff" font-size="11" font-weight="700">2 · SESSION &amp; ROUTING CORE</text>
+    <text x="255" y="27" fill="#c7d2fe" font-size="12">Shared Stateful Kernel (conversation.py &amp; router.py)</text>
+
+    <!-- Conversation Box -->
+    <rect x="30" y="45" width="420" height="90" rx="8" fill="#0f172a" stroke="#818cf8" stroke-width="1.2"/>
+    <text x="45" y="68" fill="#a5b4fc" font-size="14" font-weight="600">Conversation (State Manager)</text>
+    <text x="45" y="88" fill="#cbd5e1" font-size="11">• Holds TenantContext (tenant_id / platform scope)</text>
+    <text x="45" y="105" fill="#cbd5e1" font-size="11">• Enforces pending confirmation gate (yes/no)</text>
+    <text x="45" y="122" fill="#94a3b8" font-size="10">• Intercepts 'use', 'platform', 'scope', 'quit'</text>
+    <rect x="310" y="50" width="130" height="18" rx="4" fill="url(#pure-badge-grad)"/>
+    <text x="375" y="63" text-anchor="middle" fill="#ffffff" font-size="9" font-weight="700">🔒 Pure Python</text>
+
+    <!-- Tenant Resolver Box -->
+    <rect x="475" y="45" width="430" height="90" rx="8" fill="#0f172a" stroke="#818cf8" stroke-width="1.2"/>
+    <text x="490" y="68" fill="#a5b4fc" font-size="14" font-weight="600">TenantResolver (resolver.py)</text>
+    <text x="490" y="88" fill="#cbd5e1" font-size="11">• 5-step cascade: canonical -> alias -> norm -> fuzzy</text>
+    <text x="490" y="105" fill="#cbd5e1" font-size="11">• Gate is candidate COUNT, not score (fail closed D-003)</text>
+    <text x="490" y="122" fill="#94a3b8" font-size="10">• Returns CONFIRM if inexact (arms confirmation gate)</text>
+    <rect x="765" y="50" width="130" height="18" rx="4" fill="url(#pure-badge-grad)"/>
+    <text x="830" y="63" text-anchor="middle" fill="#ffffff" font-size="9" font-weight="700">🔒 Pure Python</text>
+
+    <!-- Router Classifier Box -->
+    <rect x="930" y="45" width="440" height="90" rx="8" fill="#0f172a" stroke="#f59e0b" stroke-width="1.5"/>
+    <text x="945" y="68" fill="#fbbf24" font-size="14" font-weight="600">Router (router.py Classifier)</text>
+    <text x="945" y="88" fill="#cbd5e1" font-size="11">• Heuristic regex first (ticket IDs, keywords, ? marks)</text>
+    <text x="945" y="105" fill="#cbd5e1" font-size="11">• Anti-enumeration oracle defense (identical error string)</text>
+    <text x="945" y="122" fill="#e2e8f0" font-size="11">• LLM Fallback ONLY if ambiguous (saves ~1s voice latency)</text>
+    <rect x="1170" y="50" width="190" height="18" rx="4" fill="url(#llm-badge-grad)"/>
+    <text x="1265" y="63" text-anchor="middle" fill="#ffffff" font-size="9" font-weight="700">⚡ LLM: Intent Fallback</text>
+  </g>
+
+  <!-- Clear Non-Overlapping Split Paths -->
+  <!-- Path Left: To Dispatch SQL -->
+  <path d="M 400 515 L 400 560" fill="none" stroke="#34d399" stroke-width="3" marker-end="url(#arr-green)"/>
+  <rect x="260" y="525" width="280" height="24" rx="4" fill="#064e3b" stroke="#34d399" stroke-width="1"/>
+  <text x="400" y="541" text-anchor="middle" fill="#34d399" font-size="11" font-weight="700">Intent: DISPATCH_QUERY</text>
+
+  <!-- Path Right: To Ticket Triage -->
+  <path d="M 1100 515 L 1100 560" fill="none" stroke="#e879f9" stroke-width="3" marker-end="url(#arr-purple)"/>
+  <rect x="965" y="525" width="270" height="24" rx="4" fill="#701a75" stroke="#e879f9" stroke-width="1"/>
+  <text x="1100" y="541" text-anchor="middle" fill="#e879f9" font-size="11" font-weight="700">Intent: TICKET_TRIAGE</text>
+
+  <!-- ========================================================================= -->
+  <!-- STAGE 3A: DISPATCH SQL PIPELINE -->
+  <!-- ========================================================================= -->
+  <g transform="translate(50, 565)" filter="url(#box-shadow)">
+    <rect width="680" height="515" rx="12" fill="url(#sql-grad)" stroke="#10b981" stroke-width="1.5"/>
+    <rect x="20" y="12" width="230" height="22" rx="4" fill="#059669"/>
+    <text x="135" y="27" text-anchor="middle" fill="#ffffff" font-size="11" font-weight="700">3A · DISPATCH SQL PIPELINE</text>
+    <text x="265" y="27" fill="#a7f3d0" font-size="12">3-Layer Defense-in-Depth Isolation</text>
+
+    <!-- Block 1: SQL Generation -->
+    <rect x="25" y="45" width="630" height="85" rx="8" fill="#0f172a" stroke="#f59e0b" stroke-width="1.5"/>
+    <text x="40" y="68" fill="#fbbf24" font-size="14" font-weight="700">SqlAgent._generate()</text>
+    <text x="40" y="88" fill="#e2e8f0" font-size="11">• Question + Introspected Schema Card + Date Anchor ('2026-05-29')</text>
+    <text x="40" y="105" fill="#cbd5e1" font-size="11">• Outputs structured JSON: {sql, is_cross_tenant, assumptions} (Validated via Pydantic)</text>
+    <text x="40" y="122" fill="#94a3b8" font-size="10">• _authority_check() refuses cross-tenant queries in bound sessions</text>
+    <rect x="420" y="50" width="225" height="20" rx="4" fill="url(#llm-badge-grad)"/>
+    <text x="532" y="64" text-anchor="middle" fill="#ffffff" font-size="10" font-weight="700">⚡ LLM CALL 1: SQL Generation</text>
+
+    <!-- Separator Arrow -->
+    <path d="M 340 130 L 340 148" fill="none" stroke="#34d399" stroke-width="2" marker-end="url(#arr-green)"/>
+
+    <!-- Block 2: AST Guard -->
+    <rect x="25" y="150" width="630" height="80" rx="8" fill="#0f172a" stroke="#34d399" stroke-width="1.2"/>
+    <text x="40" y="173" fill="#34d399" font-size="13" font-weight="700">SqlGuard.check() — Layer 2 Isolation</text>
+    <text x="40" y="193" fill="#cbd5e1" font-size="11">• sqlglot AST parse: rejects non-SELECT, multi-stmt, PRAGMA/ATTACH/VACUUM</text>
+    <text x="40" y="211" fill="#cbd5e1" font-size="11">• Injects 'tenant_id = N' on every direct FROM/JOIN in every SELECT scope | Limit 200</text>
+    <rect x="495" y="155" width="150" height="18" rx="4" fill="url(#pure-badge-grad)"/>
+    <text x="570" y="168" text-anchor="middle" fill="#ffffff" font-size="9" font-weight="700">🔒 Pure Python AST</text>
+
+    <!-- Separator Arrow -->
+    <path d="M 340 230 L 340 248" fill="none" stroke="#34d399" stroke-width="2" marker-end="url(#arr-green)"/>
+
+    <!-- Block 3: DB Execution -->
+    <rect x="25" y="250" width="305" height="90" rx="8" fill="#0f172a" stroke="#34d399" stroke-width="1.2"/>
+    <text x="35" y="272" fill="#34d399" font-size="12" font-weight="700">Layer 1: Read-Only DB</text>
+    <text x="35" y="292" fill="#cbd5e1" font-size="10">• URI 'file:dispatch.db?mode=ro'</text>
+    <text x="35" y="308" fill="#cbd5e1" font-size="10">• PRAGMA query_only = ON</text>
+    <text x="35" y="325" fill="#94a3b8" font-size="9">OS &amp; SQLite write lockout</text>
+
+    <rect x="350" y="250" width="305" height="90" rx="8" fill="#0f172a" stroke="#34d399" stroke-width="1.2"/>
+    <text x="360" y="272" fill="#34d399" font-size="12" font-weight="700">Layer 3: QueryExecutor</text>
+    <text x="360" y="292" fill="#cbd5e1" font-size="10">• Timeout via progress handler (10k ops)</text>
+    <text x="360" y="308" fill="#cbd5e1" font-size="10">• Post-exec row tenant_id assertion</text>
+    <text x="360" y="325" fill="#94a3b8" font-size="9">Asserts zero foreign tenant rows</text>
+
+    <!-- Separator Arrow -->
+    <path d="M 340 340 L 340 358" fill="none" stroke="#34d399" stroke-width="2" marker-end="url(#arr-green)"/>
+
+    <!-- Block 4: Synthesis -->
+    <rect x="25" y="360" width="630" height="85" rx="8" fill="#0f172a" stroke="#f59e0b" stroke-width="1.5"/>
+    <text x="40" y="383" fill="#fbbf24" font-size="14" font-weight="700">SqlAgent._synthesise()</text>
+    <text x="40" y="403" fill="#e2e8f0" font-size="11">• Receives verified SQLite rows + question + date anchor</text>
+    <text x="40" y="421" fill="#cbd5e1" font-size="11">• Computes ZERO arithmetic (SQLite did 100%) $\to$ Generates 2 conversational sentences</text>
+    <rect x="420" y="365" width="225" height="20" rx="4" fill="url(#llm-badge-grad)"/>
+    <text x="532" y="379" text-anchor="middle" fill="#ffffff" font-size="10" font-weight="700">⚡ LLM CALL 2: Prose Synthesis</text>
+  </g>
+
+  <!-- ========================================================================= -->
+  <!-- STAGE 3B: TICKET TRIAGE PIPELINE -->
+  <!-- ========================================================================= -->
+  <g transform="translate(770, 565)" filter="url(#box-shadow)">
+    <rect width="680" height="515" rx="12" fill="url(#triage-grad)" stroke="#c026d3" stroke-width="1.5"/>
+    <rect x="20" y="12" width="230" height="22" rx="4" fill="#a21caf"/>
+    <text x="135" y="27" text-anchor="middle" fill="#ffffff" font-size="11" font-weight="700">3B · TICKET TRIAGE PIPELINE</text>
+    <text x="265" y="27" fill="#f5d0fe" font-size="12">Deterministic Fan-In &amp; Scoring</text>
+
+    <!-- Block 1: Parser -->
+    <rect x="25" y="45" width="630" height="75" rx="8" fill="#0f172a" stroke="#e879f9" stroke-width="1.2"/>
+    <text x="40" y="68" fill="#e879f9" font-size="13" font-weight="700">ticket_parser.py (Pasted Body Parser)</text>
+    <text x="40" y="88" fill="#cbd5e1" font-size="11">• Parses subject, priority, product_area from pasted text</text>
+    <text x="40" y="105" fill="#cbd5e1" font-size="11">• Binds tenant from session context, NEVER from untrusted text (D-022)</text>
+    <rect x="500" y="50" width="145" height="18" rx="4" fill="url(#pure-badge-grad)"/>
+    <text x="572" y="63" text-anchor="middle" fill="#ffffff" font-size="9" font-weight="700">🔒 Pure Python</text>
+
+    <!-- Separator Arrow -->
+    <path d="M 340 120 L 340 138" fill="none" stroke="#e879f9" stroke-width="2" marker-end="url(#arr-purple)"/>
+
+    <!-- Block 2: Fan In -->
+    <rect x="25" y="140" width="630" height="85" rx="8" fill="#0f172a" stroke="#e879f9" stroke-width="1.2"/>
+    <text x="40" y="163" fill="#e879f9" font-size="13" font-weight="700">TriageAgent: 5-Source Fan-In</text>
+    <text x="40" y="183" fill="#cbd5e1" font-size="11">• 1. customers.json  • 2. tickets.json  • 3. call_transcripts.json</text>
+    <text x="40" y="200" fill="#cbd5e1" font-size="11">• 4. knowledge_base.json (symptom token-overlap)  • 5. dispatch.db (volume trends)</text>
+    <rect x="500" y="145" width="145" height="18" rx="4" fill="url(#pure-badge-grad)"/>
+    <text x="572" y="158" text-anchor="middle" fill="#ffffff" font-size="9" font-weight="700">🔒 Pure Python</text>
+
+    <!-- Separator Arrow -->
+    <path d="M 340 225 L 340 243" fill="none" stroke="#e879f9" stroke-width="2" marker-end="url(#arr-purple)"/>
+
+    <!-- Block 3: Scoring -->
+    <rect x="25" y="245" width="630" height="100" rx="8" fill="#0f172a" stroke="#10b981" stroke-width="1.5"/>
+    <text x="40" y="268" fill="#34d399" font-size="13" font-weight="700">escalation.py — Deterministic Risk Scoring (Zero LLM)</text>
+    <text x="40" y="288" fill="#e2e8f0" font-size="11">• Signals: health &lt; 40 (+30), contract expired (+25), CARR $\ge$ 72k (+15), duplicate cluster (+20)</text>
+    <text x="40" y="306" fill="#e2e8f0" font-size="11">• Account cap = 55 pts (D-012): bad account alone cannot trigger CRITICAL ($\ge 70$)</text>
+    <text x="40" y="324" fill="#cbd5e1" font-size="11">• Dual Clocks: Data max date (2026-05-29) vs Real CRM calendar for contracts</text>
+    <rect x="500" y="250" width="145" height="18" rx="4" fill="url(#pure-badge-grad)"/>
+    <text x="572" y="263" text-anchor="middle" fill="#ffffff" font-size="9" font-weight="700">🔒 100% Deterministic</text>
+
+    <!-- Separator Arrow -->
+    <path d="M 340 345 L 340 363" fill="none" stroke="#e879f9" stroke-width="2" marker-end="url(#arr-purple)"/>
+
+    <!-- Block 4: Narrative -->
+    <rect x="25" y="365" width="630" height="85" rx="8" fill="#0f172a" stroke="#f59e0b" stroke-width="1.5"/>
+    <text x="40" y="388" fill="#fbbf24" font-size="14" font-weight="700">TriageAgent._synthesise_narrative()</text>
+    <text x="40" y="408" fill="#e2e8f0" font-size="11">• Handed pre-computed escalation level &amp; audit signals (LLM gets ZERO vote on score)</text>
+    <text x="40" y="426" fill="#cbd5e1" font-size="11">• Synthesises concise, human-readable CSM customer brief narrative</text>
+    <rect x="420" y="370" width="225" height="20" rx="4" fill="url(#llm-badge-grad)"/>
+    <text x="532" y="384" text-anchor="middle" fill="#ffffff" font-size="10" font-weight="700">⚡ LLM CALL 3: Brief Narrative</text>
+  </g>
+
+  <!-- Clear Flow Arrows Down to Final Response -->
+  <path d="M 390 1080 L 390 1140" fill="none" stroke="#34d399" stroke-width="3" marker-end="url(#arr-green)"/>
+  <path d="M 1110 1080 L 1110 1140" fill="none" stroke="#e879f9" stroke-width="3" marker-end="url(#arr-purple)"/>
+
+  <!-- ========================================================================= -->
+  <!-- STAGE 4: RESPONSE DELIVERY -->
+  <!-- ========================================================================= -->
+  <g transform="translate(50, 1145)" filter="url(#box-shadow)">
+    <rect width="1400" height="100" rx="10" fill="#1e293b" stroke="#3b82f6" stroke-width="1.5"/>
+    <rect x="15" y="12" width="180" height="22" rx="4" fill="url(#user-grad)"/>
+    <text x="105" y="27" text-anchor="middle" fill="#ffffff" font-size="11" font-weight="700">4 · RESPONSE DELIVERY</text>
+    
+    <!-- Left: CLI Delivery -->
+    <text x="215" y="32" fill="#38bdf8" font-size="13" font-weight="700">🖥️ Screen Output (CLI):</text>
+    <text x="215" y="54" fill="#cbd5e1" font-size="11">• Prints synthesised prose + executed SQL + tabular rows + full 25-line triage audit brief.</text>
+    <text x="215" y="72" fill="#94a3b8" font-size="10">• Pure Python string formatting with ANSI color codes.</text>
+    
+    <!-- Right: Voice Delivery -->
+    <text x="800" y="32" fill="#fbbf24" font-size="13" font-weight="700">🔊 Ear Output (Voice):</text>
+    <text x="800" y="54" fill="#cbd5e1" font-size="11">• Prose only (SQL never spoken); brief truncated to level + top 2 drivers; dates spoken as words.</text>
+    <text x="800" y="72" fill="#94a3b8" font-size="10">• OpenAI TTS-1 synthesised audio streamed to speaker.</text>
+    
+    <rect x="1180" y="20" width="200" height="22" rx="4" fill="url(#llm-badge-grad)"/>
+    <text x="1280" y="35" text-anchor="middle" fill="#ffffff" font-size="10" font-weight="700">⚡ API: OpenAI TTS-1</text>
+  </g>
+</svg>

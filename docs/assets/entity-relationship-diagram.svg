@@ -1,0 +1,249 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1500 1150" width="100%" height="100%" style="background:#0b0f19; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+  <defs>
+    <!-- Gradients -->
+    <linearGradient id="header-crm" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4c1d95"/>
+      <stop offset="100%" stop-color="#6d28d9"/>
+    </linearGradient>
+    <linearGradient id="header-db" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0369a1"/>
+      <stop offset="100%" stop-color="#0284c7"/>
+    </linearGradient>
+    <linearGradient id="header-fact" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#047857"/>
+      <stop offset="100%" stop-color="#059669"/>
+    </linearGradient>
+    <linearGradient id="header-kb" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#831843"/>
+      <stop offset="100%" stop-color="#be185d"/>
+    </linearGradient>
+
+    <!-- Markers -->
+    <marker id="dot-blue" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6">
+      <circle cx="5" cy="5" r="3" fill="#38bdf8"/>
+    </marker>
+    <marker id="arr-blue" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#38bdf8"/>
+    </marker>
+    <marker id="arr-purple" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#c084fc"/>
+    </marker>
+
+    <!-- Drop Shadow Filter -->
+    <filter id="card-shadow" x="-3%" y="-3%" width="106%" height="108%">
+      <feDropShadow dx="0" dy="4" stdDeviation="5" flood-color="#000000" flood-opacity="0.5"/>
+    </filter>
+  </defs>
+
+  <!-- ========================================================================= -->
+  <!-- TITLE -->
+  <!-- ========================================================================= -->
+  <text x="50" y="42" fill="#f8fafc" font-size="22" font-weight="700">FleetPanda — Complete Entity-Relationship (ER) Model</text>
+  <text x="50" y="66" fill="#94a3b8" font-size="13">Multi-Tenant Document Plane (JSON) &amp; Relational Operational Plane (dispatch.db SQLite)</text>
+
+  <!-- ========================================================================= -->
+  <!-- SECTION 1: CRM & METADATA (JSON FILES) -->
+  <!-- ========================================================================= -->
+  <rect x="40" y="90" width="1420" height="360" rx="12" fill="#1e1b4b" fill-opacity="0.35" stroke="#4338ca" stroke-width="1.5" stroke-dasharray="6,6"/>
+  <rect x="55" y="100" width="300" height="24" rx="6" fill="#4338ca"/>
+  <text x="65" y="117" fill="#ffffff" font-size="11" font-weight="700">CRM &amp; SUPPORT DATA PLANE (data/*.json)</text>
+
+  <!-- 1.1 TENANTS -->
+  <g transform="translate(60, 140)" filter="url(#card-shadow)">
+    <rect width="260" height="230" rx="8" fill="#1e293b" stroke="#6366f1" stroke-width="1.5"/>
+    <rect width="260" height="35" rx="8" fill="url(#header-crm)"/>
+    <text x="130" y="23" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="700">TENANTS (customers.json)</text>
+    <text x="15" y="55" fill="#38bdf8" font-size="11" font-weight="600">PK  tenant_id : int (1-12)</text>
+    <text x="15" y="75" fill="#e2e8f0" font-size="11">    name : string (canonical legal name)</text>
+    <text x="15" y="95" fill="#e2e8f0" font-size="11">    health_score : int (0-100)</text>
+    <text x="15" y="115" fill="#e2e8f0" font-size="11">    carr : int (Annual Recurring Rev $)</text>
+    <text x="15" y="135" fill="#e2e8f0" font-size="11">    contract_end_date : date</text>
+    <text x="15" y="155" fill="#e2e8f0" font-size="11">    modules_active : list[str]</text>
+    <text x="15" y="175" fill="#e2e8f0" font-size="11">    primary_contact : string</text>
+    <text x="15" y="200" fill="#94a3b8" font-size="10">System-wide Partitioning Root</text>
+  </g>
+
+  <!-- 1.2 TENANT_ALIASES -->
+  <g transform="translate(350, 140)" filter="url(#card-shadow)">
+    <rect width="230" height="120" rx="8" fill="#1e293b" stroke="#6366f1" stroke-width="1.5"/>
+    <rect width="230" height="35" rx="8" fill="url(#header-crm)"/>
+    <text x="115" y="23" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="700">TENANT_ALIASES</text>
+    <text x="15" y="55" fill="#38bdf8" font-size="11" font-weight="600">PK  alias : string (e.g. CFS, DSP)</text>
+    <text x="15" y="75" fill="#a5b4fc" font-size="11" font-weight="600">FK  tenant_id : int</text>
+    <text x="15" y="100" fill="#94a3b8" font-size="10">Curated short codes for instant bind</text>
+  </g>
+
+  <!-- 1.3 SUPPORT_TICKETS -->
+  <g transform="translate(610, 140)" filter="url(#card-shadow)">
+    <rect width="260" height="230" rx="8" fill="#1e293b" stroke="#6366f1" stroke-width="1.5"/>
+    <rect width="260" height="35" rx="8" fill="url(#header-crm)"/>
+    <text x="130" y="23" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="700">SUPPORT_TICKETS (tickets.json)</text>
+    <text x="15" y="55" fill="#38bdf8" font-size="11" font-weight="600">PK  ticket_id : int (e.g. 1083)</text>
+    <text x="15" y="75" fill="#a5b4fc" font-size="11" font-weight="600">FK  tenant_id : int</text>
+    <text x="15" y="95" fill="#e2e8f0" font-size="11">    subject : string</text>
+    <text x="15" y="115" fill="#e2e8f0" font-size="11">    product_area : string</text>
+    <text x="15" y="135" fill="#e2e8f0" font-size="11">    priority : urgent|high|med|low</text>
+    <text x="15" y="155" fill="#e2e8f0" font-size="11">    status : open|pending|closed</text>
+    <text x="15" y="175" fill="#e2e8f0" font-size="11">    created_at : timestamp</text>
+    <text x="15" y="195" fill="#e2e8f0" font-size="11">    body : string (untrusted)</text>
+  </g>
+
+  <!-- 1.4 CALL_TRANSCRIPTS -->
+  <g transform="translate(900, 140)" filter="url(#card-shadow)">
+    <rect width="260" height="230" rx="8" fill="#1e293b" stroke="#6366f1" stroke-width="1.5"/>
+    <rect width="260" height="35" rx="8" fill="url(#header-crm)"/>
+    <text x="130" y="23" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="700">CALL_TRANSCRIPTS</text>
+    <text x="15" y="55" fill="#38bdf8" font-size="11" font-weight="600">PK  transcript_id : int</text>
+    <text x="15" y="75" fill="#a5b4fc" font-size="11" font-weight="600">FK  tenant_id : int (resolved)</text>
+    <text x="15" y="95" fill="#e2e8f0" font-size="11">    customer_name : string</text>
+    <text x="15" y="115" fill="#e2e8f0" font-size="11">    call_date : date</text>
+    <text x="15" y="135" fill="#e2e8f0" font-size="11">    topic : string</text>
+    <text x="15" y="155" fill="#e2e8f0" font-size="11">    sentiment : pos|neut|neg</text>
+    <text x="15" y="175" fill="#e2e8f0" font-size="11">    competitor_mentioned : bool</text>
+    <text x="15" y="195" fill="#e2e8f0" font-size="11">    summary : string</text>
+  </g>
+
+  <!-- 1.5 KNOWLEDGE_BASE -->
+  <g transform="translate(1190, 140)" filter="url(#card-shadow)">
+    <rect width="240" height="200" rx="8" fill="#1e293b" stroke="#ec4899" stroke-width="1.5"/>
+    <rect width="240" height="35" rx="8" fill="url(#header-kb)"/>
+    <text x="120" y="23" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="700">KNOWLEDGE_BASE</text>
+    <text x="15" y="55" fill="#38bdf8" font-size="11" font-weight="600">PK  article_id : str (KB-003)</text>
+    <text x="15" y="75" fill="#e2e8f0" font-size="11">    title : string</text>
+    <text x="15" y="95" fill="#e2e8f0" font-size="11">    product_area : string</text>
+    <text x="15" y="115" fill="#e2e8f0" font-size="11">    symptoms : list[string]</text>
+    <text x="15" y="135" fill="#e2e8f0" font-size="11">    resolution : string</text>
+    <text x="15" y="165" fill="#f472b6" font-size="10">Symptom token-overlap match</text>
+  </g>
+
+  <!-- Clean JSON Plane Connectors -->
+  <!-- TENANTS -> TENANT_ALIASES -->
+  <path d="M 320 200 L 350 200" fill="none" stroke="#6366f1" stroke-width="2" marker-end="url(#arr-purple)"/>
+  <text x="335" y="190" fill="#a5b4fc" font-size="10" text-anchor="middle">1:N</text>
+
+  <!-- TENANTS -> SUPPORT_TICKETS (via gutter) -->
+  <path d="M 320 240 L 465 240 L 465 280 L 610 280" fill="none" stroke="#6366f1" stroke-width="2" marker-end="url(#arr-purple)"/>
+  <text x="490" y="275" fill="#a5b4fc" font-size="10">1:N</text>
+
+  <!-- SUPPORT_TICKETS -> KNOWLEDGE_BASE -->
+  <path d="M 870 200 L 885 200 L 885 110 L 1175 110 L 1175 200 L 1190 200" fill="none" stroke="#ec4899" stroke-width="2" stroke-dasharray="4,4" marker-end="url(#arr-purple)"/>
+  <text x="1030" y="105" fill="#f472b6" font-size="10" text-anchor="middle">symptom match (N:1)</text>
+
+  <!-- ========================================================================= -->
+  <!-- SECTION 2: RELATIONAL DISPATCH (dispatch.db SQLite) -->
+  <!-- ========================================================================= -->
+  <rect x="40" y="480" width="1420" height="620" rx="12" fill="#082f49" fill-opacity="0.35" stroke="#0284c7" stroke-width="1.5" stroke-dasharray="6,6"/>
+  <rect x="55" y="490" width="340" height="24" rx="6" fill="#0284c7"/>
+  <text x="65" y="507" fill="#ffffff" font-size="11" font-weight="700">RELATIONAL FLEET &amp; DISPATCH DB (dispatch.db SQLite)</text>
+
+  <!-- 2.1 customers (End-clients receiving fuel) -->
+  <g transform="translate(60, 530)" filter="url(#card-shadow)">
+    <rect width="260" height="210" rx="8" fill="#1e293b" stroke="#0284c7" stroke-width="1.5"/>
+    <rect width="260" height="35" rx="8" fill="url(#header-db)"/>
+    <text x="130" y="23" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="700">customers (End-Recipients)</text>
+    <text x="15" y="55" fill="#38bdf8" font-size="11" font-weight="600">PK  customer_id : int</text>
+    <text x="15" y="75" fill="#a5b4fc" font-size="11" font-weight="600">FK  tenant_id : int (1-12)</text>
+    <text x="15" y="95" fill="#e2e8f0" font-size="11">    name : string</text>
+    <text x="15" y="115" fill="#e2e8f0" font-size="11">    location : string</text>
+    <text x="15" y="135" fill="#e2e8f0" font-size="11">    tank_capacity : float</text>
+    <text x="15" y="155" fill="#e2e8f0" font-size="11">    status : 'active'</text>
+    <text x="15" y="185" fill="#fcd34d" font-size="10">Fuel buyers, NOT FleetPanda tenants</text>
+  </g>
+
+  <!-- 2.2 tank_readings (Child of customers) -->
+  <g transform="translate(60, 780)" filter="url(#card-shadow)">
+    <rect width="260" height="200" rx="8" fill="#1e293b" stroke="#0284c7" stroke-width="1.5"/>
+    <rect width="260" height="35" rx="8" fill="url(#header-db)"/>
+    <text x="130" y="23" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="700">tank_readings (Telemetry)</text>
+    <text x="15" y="55" fill="#38bdf8" font-size="11" font-weight="600">PK  reading_id : int</text>
+    <text x="15" y="75" fill="#a5b4fc" font-size="11" font-weight="600">FK  tenant_id : int</text>
+    <text x="15" y="95" fill="#a5b4fc" font-size="11" font-weight="600">FK  customer_id : int</text>
+    <text x="15" y="115" fill="#e2e8f0" font-size="11">    timestamp : string</text>
+    <text x="15" y="135" fill="#e2e8f0" font-size="11">    current_level_gallons : float</text>
+    <text x="15" y="155" fill="#e2e8f0" font-size="11">    percentage_full : float</text>
+    <text x="15" y="180" fill="#ef4444" font-size="10">⚠️ 9x fanout trap on table joins</text>
+  </g>
+
+  <!-- 2.3 drivers -->
+  <g transform="translate(360, 530)" filter="url(#card-shadow)">
+    <rect width="240" height="190" rx="8" fill="#1e293b" stroke="#0284c7" stroke-width="1.5"/>
+    <rect width="240" height="35" rx="8" fill="url(#header-db)"/>
+    <text x="120" y="23" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="700">drivers</text>
+    <text x="15" y="55" fill="#38bdf8" font-size="11" font-weight="600">PK  driver_id : int</text>
+    <text x="15" y="75" fill="#a5b4fc" font-size="11" font-weight="600">FK  tenant_id : int</text>
+    <text x="15" y="95" fill="#e2e8f0" font-size="11">    name : string</text>
+    <text x="15" y="115" fill="#e2e8f0" font-size="11">    license_class : CDL-A|CDL-B</text>
+    <text x="15" y="135" fill="#e2e8f0" font-size="11">    status : active|off_duty</text>
+  </g>
+
+  <!-- 2.4 trucks -->
+  <g transform="translate(360, 750)" filter="url(#card-shadow)">
+    <rect width="240" height="190" rx="8" fill="#1e293b" stroke="#0284c7" stroke-width="1.5"/>
+    <rect width="240" height="35" rx="8" fill="url(#header-db)"/>
+    <text x="120" y="23" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="700">trucks</text>
+    <text x="15" y="55" fill="#38bdf8" font-size="11" font-weight="600">PK  truck_id : int</text>
+    <text x="15" y="75" fill="#a5b4fc" font-size="11" font-weight="600">FK  tenant_id : int</text>
+    <text x="15" y="95" fill="#e2e8f0" font-size="11">    label : Tanker-04</text>
+    <text x="15" y="115" fill="#e2e8f0" font-size="11">    capacity_gallons : int</text>
+    <text x="15" y="135" fill="#e2e8f0" font-size="11">    status : active|maintenance</text>
+  </g>
+
+  <!-- 2.5 delivery_orders (CENTRAL FACT TABLE) -->
+  <g transform="translate(670, 530)" filter="url(#card-shadow)">
+    <rect width="360" height="320" rx="8" fill="#0f172a" stroke="#10b981" stroke-width="2.5"/>
+    <rect width="360" height="35" rx="8" fill="url(#header-fact)"/>
+    <text x="180" y="23" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="700">delivery_orders (Core Fact Table)</text>
+    <text x="15" y="55" fill="#38bdf8" font-size="11" font-weight="600">PK  order_id : int</text>
+    <text x="15" y="75" fill="#a5b4fc" font-size="11" font-weight="600">FK  tenant_id : int (Partitioning key)</text>
+    <text x="15" y="95" fill="#a5b4fc" font-size="11" font-weight="600">FK  customer_id : int  (References customers)</text>
+    <text x="15" y="115" fill="#a5b4fc" font-size="11" font-weight="600">FK  driver_id : int    (References drivers)</text>
+    <text x="15" y="135" fill="#a5b4fc" font-size="11" font-weight="600">FK  truck_id : int     (References trucks)</text>
+    <text x="15" y="155" fill="#e2e8f0" font-size="11">    order_date : date (When order placed)</text>
+    <text x="15" y="175" fill="#e2e8f0" font-size="11">    delivery_date : date (Scheduled / Anchor)</text>
+    <text x="15" y="195" fill="#e2e8f0" font-size="11">    product_type : diesel | unleaded_regular</text>
+    <text x="15" y="215" fill="#e2e8f0" font-size="11">    gallons_ordered : float</text>
+    <text x="15" y="235" fill="#e2e8f0" font-size="11">    gallons_delivered : float (NULL if not completed)</text>
+    <text x="15" y="255" fill="#e2e8f0" font-size="11">    status : completed | cancelled | pending</text>
+    <text x="15" y="275" fill="#e2e8f0" font-size="11">    order_type : standard | emergency</text>
+    <text x="15" y="298" fill="#34d399" font-size="10">Filtered by status = 'completed' for completed metrics</text>
+  </g>
+
+  <!-- 2.6 shifts -->
+  <g transform="translate(1100, 530)" filter="url(#card-shadow)">
+    <rect width="320" height="230" rx="8" fill="#1e293b" stroke="#0284c7" stroke-width="1.5"/>
+    <rect width="320" height="35" rx="8" fill="url(#header-db)"/>
+    <text x="160" y="23" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="700">shifts (Operational Work Shifts)</text>
+    <text x="15" y="55" fill="#38bdf8" font-size="11" font-weight="600">PK  shift_id : int</text>
+    <text x="15" y="75" fill="#a5b4fc" font-size="11" font-weight="600">FK  tenant_id : int</text>
+    <text x="15" y="95" fill="#a5b4fc" font-size="11" font-weight="600">FK  driver_id : int  (References drivers)</text>
+    <text x="15" y="115" fill="#a5b4fc" font-size="11" font-weight="600">FK  truck_id : int   (References trucks)</text>
+    <text x="15" y="135" fill="#e2e8f0" font-size="11">    shift_date : date</text>
+    <text x="15" y="155" fill="#e2e8f0" font-size="11">    total_deliveries : int (Shift-only counter)</text>
+    <text x="15" y="175" fill="#e2e8f0" font-size="11">    status : 'completed'</text>
+    <text x="15" y="205" fill="#ef4444" font-size="10">⚠️ Do NOT sum total_deliveries for order volume</text>
+  </g>
+
+  <!-- ========================================================================= -->
+  <!-- RELATIONAL CONNECTIONS (ROUTED CLEANLY VIA GUTTERS - ZERO OVERLAP) -->
+  <!-- ========================================================================= -->
+
+  <!-- 1. customers -> tank_readings (Vertical direct) -->
+  <path d="M 190 740 L 190 780" fill="none" stroke="#38bdf8" stroke-width="2" marker-end="url(#arr-blue)"/>
+  <text x="205" y="765" fill="#38bdf8" font-size="10">1:N</text>
+
+  <!-- 2. customers -> delivery_orders (Routed through top horizontal corridor) -->
+  <path d="M 320 570 L 340 570 L 340 510 L 650 510 L 650 570 L 670 570" fill="none" stroke="#38bdf8" stroke-width="2" marker-end="url(#arr-blue)"/>
+  <text x="495" y="505" fill="#38bdf8" font-size="10" text-anchor="middle">customers -> delivery_orders (1:N)</text>
+
+  <!-- 3. drivers -> delivery_orders (Direct horizontal) -->
+  <path d="M 600 620 L 670 620" fill="none" stroke="#38bdf8" stroke-width="2" marker-end="url(#arr-blue)"/>
+  <text x="635" y="612" fill="#38bdf8" font-size="10" text-anchor="middle">1:N</text>
+
+  <!-- 4. trucks -> delivery_orders (Direct diagonal/orthogonal) -->
+  <path d="M 600 790 L 635 790 L 635 670 L 670 670" fill="none" stroke="#38bdf8" stroke-width="2" marker-end="url(#arr-blue)"/>
+  <text x="620" y="780" fill="#38bdf8" font-size="10">1:N</text>
+
+  <!-- 5. drivers & trucks -> shifts (Routed through bottom corridor around delivery_orders) -->
+  <path d="M 480 720 L 480 740 L 480 960 L 1260 960 L 1260 760" fill="none" stroke="#0284c7" stroke-width="2" stroke-dasharray="4,4" marker-end="url(#arr-blue)"/>
+  <text x="870" y="950" fill="#0284c7" font-size="10" text-anchor="middle">drivers &amp; trucks -> shifts (1:N)</text>
+</svg>
