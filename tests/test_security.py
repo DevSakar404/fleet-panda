@@ -74,6 +74,13 @@ def test_write_statements_are_rejected(guard, sql):
     assert not guard.check(sql, TENANT).allowed
 
 
+def test_select_into_is_rejected(guard):
+    """`SELECT * INTO backup FROM t` writes a table but stays rooted at exp.Select,
+    so the root-must-be-SELECT check does not catch it. `exp.Into` in the forbidden
+    node list is what does -- this pins that it stays there."""
+    assert not guard.check("SELECT * INTO backup FROM delivery_orders", TENANT).allowed
+
+
 @pytest.mark.parametrize(
     "sql, attack",
     [

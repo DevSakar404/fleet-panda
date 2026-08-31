@@ -204,7 +204,7 @@ A statement is rejected (before it runs, with a reason string) if any of:
 | Rule | Rejects |
 |---|---|
 | Not an `exp.Select` | `INSERT` / `UPDATE` / `DELETE` / DDL as the top statement |
-| Any `FORBIDDEN_NODES` anywhere in the tree | `Insert, Update, Delete, Drop, Create, Alter, Command, Transaction, Commit, Rollback`. `Command` is the catch-all `sqlglot` parses bare verbs into — it is what stops `PRAGMA query_only = OFF` and `ATTACH DATABASE …` |
+| Any `FORBIDDEN_NODES` anywhere in the tree | `Insert, Update, Delete, Drop, Create, Alter, Command, Transaction, Commit, Rollback, Into`. `Command` is the catch-all `sqlglot` parses bare verbs into (stops `PRAGMA query_only = OFF` and `ATTACH DATABASE …`). `Into` catches `SELECT * INTO backup FROM t` (which stays rooted at `exp.Select` and would otherwise slip past the root SELECT check). |
 | Table name starts with `sqlite_` | Reads of SQLite's internal catalogue (schema disclosure) |
 | Table not in `config.TENANT_SCOPED_TABLES` | Anything outside `{customers, drivers, trucks, delivery_orders, shifts, tank_readings}` |
 | Schema qualifier present and `≠ main` | Cross-database references (`otherdb.delivery_orders`) — belt to the `ATTACH` braces |

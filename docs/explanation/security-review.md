@@ -184,7 +184,8 @@ Three independent layers, each of which holds if the others fail:
 
 2. **Validate the AST before execution.** Parse with `sqlglot`; reject anything
    that is not exactly one `SELECT`; reject `INSERT`/`UPDATE`/`DELETE`/`DROP`/
-   `CREATE`/`ALTER` and `exp.Command` (which is how `PRAGMA`, `ATTACH` and `VACUUM`
+   `CREATE`/`ALTER`, `exp.Into` (stops `SELECT … INTO` table writes which stay rooted at `exp.Select`),
+   and `exp.Command` (which is how `PRAGMA`, `ATTACH` and `VACUUM`
    parse — a forbidden-node list that only names DML would let all three through);
    reject `sqlite_*` internal tables and any table outside an allowlist derived
    from schema introspection; reject cross-database references; force a `LIMIT`.

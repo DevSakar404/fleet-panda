@@ -36,9 +36,21 @@ from src.agent.session import TenantContext
 # PRAGMA, ATTACH, VACUUM and similar bare verbs into `exp.Command`, which is why
 # that catch-all is in the list -- it is the node type that would otherwise let
 # `PRAGMA query_only = OFF` or `ATTACH DATABASE ...` through as "not a DML node".
+#
+# Most of these are top-level statements that the `isinstance(statement, exp.Select)`
+# check already rejects (their root is not a Select). They are listed anyway, belt to
+# that check's braces, so a nested one is caught even if the root gate is ever weakened.
+# `exp.Into` earns its place for a different reason: `SELECT * INTO backup FROM t`
+# stays rooted at exp.Select, so it slips PAST the root gate -- it is the one write
+# verb this list catches that the Select check does not.
+#
+# Deliberately NOT here: `exp.Replace` is the SQLite REPLACE(str, a, b) string
+# function, not `REPLACE INTO`, so forbidding it would reject legitimate SELECTs.
+# `exp.Truncate` does not exist in sqlglot and referencing it breaks the import.
 FORBIDDEN_NODES: tuple[type[exp.Expression], ...] = (
     exp.Insert, exp.Update, exp.Delete, exp.Drop, exp.Create, exp.Alter,
     exp.Command, exp.Transaction, exp.Commit, exp.Rollback,
+    exp.Into,
 )
 
 # SQLite's internal catalogue. Reading it leaks every tenant's schema and, more
