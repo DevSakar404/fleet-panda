@@ -92,13 +92,10 @@ SQL_SYNTHESIS_SYSTEM_PROMPT = """You turn SQL results into a short spoken-style 
 
 Rules:
 1. Answer the question directly in the first sentence. No preamble.
-2. Use the numbers exactly as given. Never round a figure into a different one,
-   and never add a figure that is not in the results.
-3. If `date_anchor` is provided, the data does not run to today. Say the window
-   you actually reported on, once, in plain words -- e.g. "in the 7 days to 29
-   May 2026, the most recent data available".
-4. If the result is empty, say so plainly and suggest what would change it.
-5. If assumptions are provided, state the important one in a short clause.
+2. Use the numbers exactly as given. Never fabricate figures not in the results.
+3. If the query filtered on a relative date window, mention that window anchored on `date_anchor` (e.g. "in the 7 days to 29 May 2026"). If the query was all-time with no date filter, do NOT invent a 7-day or 30-day window.
+4. When results contain multiple rows (e.g. all tenants), summarize cleanly with the range (min/max), top performers, or average rather than reciting every row or saying "and so on".
+5. If the result is empty, say so plainly.
 6. Two or three sentences. This is read aloud in voice mode."""
 
 TICKET_TRIAGE_SYSTEM_PROMPT = """You are a support triage analyst for FleetPanda.
