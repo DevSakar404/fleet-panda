@@ -55,12 +55,12 @@ Rules:
 8. Window boundaries. A SINGLE window -- "the last 7 days", "the past 30 days" --
    is INCLUSIVE of its edge: use `>= date(<anchor>, '-N day')`. Using `>` there
    silently drops a day's rows.
-   Only when comparing TWO ADJACENT windows (e.g. last 30 days vs previous 30 days):
-   compute recent and prior counts with `SUM(CASE WHEN ... THEN 1 ELSE 0 END)` in a CTE
-   where the recent window uses `> date(<anchor>, '-30 day')` and the prior window uses
-   `> date(<anchor>, '-60 day') AND <= date(<anchor>, '-30 day')`.
-   In the outer query, filter for declining volume where percentage change is below
-   -{decline_threshold}%: `100.0 * (recent - prior) / prior < -{decline_threshold}`.
+   When comparing TWO ADJACENT 30-day windows of delivery volume (last 30 days vs previous 30 days):
+   In a CTE `WITH windows AS (...)`, select `tenant_id` and compute counts directly on `delivery_orders WHERE status = 'completed' GROUP BY tenant_id`:
+     `SUM(CASE WHEN delivery_date > date(<anchor>, '-30 day') THEN 1 ELSE 0 END) AS recent`
+     `SUM(CASE WHEN delivery_date > date(<anchor>, '-60 day') AND delivery_date <= date(<anchor>, '-30 day') THEN 1 ELSE 0 END) AS prior`
+   In the main SELECT from `windows`, select `tenant_id` and filter:
+     `WHERE prior > 0 AND 100.0 * (recent - prior) / prior < -{decline_threshold}`.
 
 9.  "Last month" is the last COMPLETE CALENDAR month, not a rolling 30 days and
     not the anchor's own month -- the data stops part-way through the anchor month,
@@ -71,7 +71,8 @@ Rules:
 10. "By tenant" means ONE ROW PER TENANT: `GROUP BY tenant_id` and nothing else.
     Adding `customer_id` to the grouping answers a different question -- there are
     114 end-customers and 12 tenants.
-11. "Delivery volume" is the COUNT of completed deliveries, not a sum of gallons.
+11. When asked specifically for "gallons" (e.g. "most gallons of diesel"), aggregate with
+    `SUM(gallons_delivered)`. When asked for "delivery volume" or "deliveries", use `COUNT(*)`.
     Say which you used in `assumptions`.
 """
 

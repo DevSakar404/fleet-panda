@@ -111,8 +111,8 @@ class SchemaCard:
             "- `shifts.total_deliveries` is a per-shift counter that does NOT "
             "reconcile with `delivery_orders`: it sums to 40,911 platform-wide "
             "against 6,851 completed orders, roughly 6x. Never use it to count "
-            "deliveries. To rank drivers, COUNT rows in `delivery_orders` grouped "
-            "by `driver_id`.",
+            "deliveries. To rank drivers, COUNT rows in `delivery_orders` with "
+            "`status = 'completed'` grouped by `driver_id`.",
             "- A question naming people or vehicles wants their labels, not their "
             "keys. Join `drivers` for `drivers.name` and `trucks` for "
             "`trucks.label` rather than returning a bare `driver_id` or "
