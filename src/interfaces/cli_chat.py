@@ -136,7 +136,7 @@ def _load_env() -> None:
     populated. Each entrypoint (this CLI, and later the voice transport) loads it
     once at startup.
 
-    `override=False` so an exported ANTHROPIC_API_KEY in the shell wins over a
+    `override=False` so an exported OPENAI_API_KEY in the shell wins over a
     stale `.env` -- the opposite is a confusing hour of debugging.
     """
     try:

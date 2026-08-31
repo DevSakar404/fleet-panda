@@ -2,8 +2,8 @@
 
 ## Session summary
 
-**Updated 2026-08-30 (documentation + gap-closing session). Chat and voice both
-work end to end. 313 tests pass.**
+**Updated 2026-08-31 (documentation + gap-closing session). Chat and voice both
+work end to end. 310 tests pass.**
 
 ### This session: an audit against the assignment, and the three gaps it found
 

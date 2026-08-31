@@ -227,7 +227,7 @@ def test_triage_without_an_id_asks_for_one(router):
 def test_a_data_question_without_a_model_refuses_clearly(router):
     response = router.route("How many deliveries last week?", TenantContext.platform())
     assert response.kind is ResponseKind.REFUSAL
-    assert "ANTHROPIC_API_KEY" in response.text
+    assert "OPENAI_API_KEY" in response.text
 
 
 def test_empty_input_is_a_clarify_not_a_crash(router):

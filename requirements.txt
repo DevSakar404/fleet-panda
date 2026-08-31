@@ -1,11 +1,10 @@
 # Pinned exactly. Every line justified, per CLAUDE.md section 5.
 # Install: uv pip install -r requirements.txt   (or pip, into a 3.11+ venv)
 
-anthropic==1.2.0      # LLM provider SDK, called directly -- no agent framework (CLAUDE.md 3.1)
-openai==3.6.0         # alternative provider; whichever key is set wins (src/llm/client.py)
+openai==3.6.0         # LLM provider, text-to-SQL, whisper-1 STT, tts-1 TTS
 sqlglot==30.17.0      # SQL parsing and AST rewriting; the tenant guard is built on it
 rapidfuzz==3.14.5     # fuzzy tenant-name matching for voice/free-text input
 pydantic==2.13.5      # structured LLM output only; loaded data uses stdlib dataclasses
-python-dotenv==1.2.3  # reads ANTHROPIC_API_KEY from .env in local development
+python-dotenv==1.2.3  # reads OPENAI_API_KEY from .env in local development
 sounddevice==0.5.2    # microphone capture and playback for voice mode; wheels bundle PortAudio
 numpy==2.3.4          # the buffer type sounddevice records into and plays back

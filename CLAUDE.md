@@ -219,12 +219,8 @@ requirements closed were voice mode (Step 5) and pasted-ticket triage.
    model ID that no longer exists and the client passed a `temperature` parameter
    that current models reject with a 400 — both sat there while the whole suite
    passed (Q-017). Verify current model IDs and parameters before writing API code.
-   Verified 2026-08-30 against the current Anthropic reference: `claude-opus-5` +
-   `output_config={"effort": ...}` + no sampling params is the correct shape, and
-   `client.py` matches it. Note the residual tuning risk: on Opus 5 adaptive
-   thinking is on by default and its tokens count against `LLM_MAX_TOKENS` (2048),
-   so a hard SQL generation could crowd the JSON output — bump it if a live answer
-   ever truncates.
+    Verified against OpenAI reference: `gpt-4o-mini` with automatic prefix caching
+    is the standard configuration in `src/llm/client.py`.
 2. **The data ends 2026-05-29.** Anchored on `date('now')`, four of the eight graded
    questions return zero rows. Relative windows anchor on `MAX(delivery_date)` and
    the agent states the anchor in its reply (D-001). Contract proximity is the

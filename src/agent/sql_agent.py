@@ -250,7 +250,6 @@ class SqlAgent:
         response = self._llm.complete(
             system=prompts.SQL_SYNTHESIS_SYSTEM_PROMPT,
             user=json.dumps(payload, default=str),
-            effort=config.LLM_EFFORT_SYNTHESIS,
         )
         return SqlAnswer(
             question=question,

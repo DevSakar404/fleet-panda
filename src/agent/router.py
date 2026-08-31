@@ -222,7 +222,7 @@ class Router:
             return RouterResponse(
                 ResponseKind.REFUSAL,
                 "No language model is configured, so I cannot answer data questions. "
-                "Set ANTHROPIC_API_KEY.",
+                "Set OPENAI_API_KEY.",
                 Intent.DISPATCH_QUERY,
             )
         answer = self._sql_agent.answer(text, context)

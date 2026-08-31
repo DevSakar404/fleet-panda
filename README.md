@@ -15,8 +15,8 @@ isolation, routing, and escalation is made once, below the transport boundary.
 | | |
 |---|---|
 | Build | Chat and voice both work end to end. No stubs remain. |
-| Tests | **313 pass, no skips.** No test needs an API key, a microphone, or a network connection. |
-| Live model | Run against a real model: **isolation 7/7**, data correctness **8/8 (24/24 eval pass)**. Measured on `gpt-4o-mini` and `claude-opus-5`. |
+| Tests | **310 pass, no skips.** No test needs an API key, a microphone, or a network connection. |
+| Live model | Run against a real model: **isolation 7/7**, data correctness **8/8 (24/24 eval pass)**. Measured on `gpt-4o-mini`. |
 | Known gaps | None. Voice verified live end-to-end and with offline `say` fallback. |
 
 The system has **no HTTP API**. It ships as two terminal transports. Where this
@@ -29,11 +29,9 @@ forward-looking note, not a description of code in this repository — see
 ## Prerequisites
 
 - Python 3.11+ (developed on 3.12)
-- One LLM key — `ANTHROPIC_API_KEY` **or** `OPENAI_API_KEY` — to run the agent.
-  Not required to run the tests. Anthropic wins if both are set; nothing outside
-  `src/llm/client.py` knows which provider is in use.
-- Voice mode additionally requires `OPENAI_API_KEY` specifically: it drives both
-  speech-to-text (`whisper-1`) and text-to-speech (`tts-1`).
+- One OpenAI key — `OPENAI_API_KEY` — to run the live agent (chat and voice).
+  Not required to run the hermetic test suite. It drives text-to-SQL reasoning,
+  ticket triage, speech recognition (`whisper-1`), and speech synthesis (`tts-1`).
 
 ## Install
 
@@ -122,7 +120,7 @@ env $(cat .env | xargs) FLEETPANDA_EVAL_LLM=1 .venv/bin/python -m pytest tests/t
 3. **Tests AST Query Guard & Multi-Tenant Boundaries Under Real Conditions:** Ensures that non-deterministic, model-generated SQL passes AST validation and properly respects tenant boundary enforcement.
 4. **Dual-Layer Diagnosability:** Reference tests verify data/schema layer integrity, while live tests verify the LLM agent layer. If reference passes and live fails, the prompt or SQL generation needs tuning; if both fail, the underlying data/guard layer is broken.
 
-#### Benchmark scorecard (Measured on `gpt-4o-mini` and `claude-opus-5`)
+#### Benchmark scorecard (Measured on `gpt-4o-mini`)
 - **Multi-Tenant Isolation Score: 7/7 (100%)** — All 4 cross-tenant queries (Q1, Q2, Q7, Q8) are strictly refused in tenant-scoped sessions, and all 3 scoped questions (Q3, Q4, Q5) are properly filtered.
 - **Data Correctness Score: 8/8 (100%)** — Dynamic queries match hand-computed ground truth numbers across all eight dispatch questions (24/24 evaluation items passing).
 - **Q8 Boundary Robustness:** Prompt and assertions cleanly accommodate both standard edge boundary conventions (strictly `>` vs. `>=` on the -30 day boundary), correctly identifying the declining volume group.

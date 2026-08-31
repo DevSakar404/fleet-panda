@@ -33,7 +33,7 @@ cp .env.example .env
 
 Runs **without** an API key: tenant binding, ticket triage, and every isolation
 refusal path are deterministic. Only dispatch-data questions call a model
-(`ANTHROPIC_API_KEY` or `OPENAI_API_KEY`; Anthropic wins if both are set).
+(`OPENAI_API_KEY`).
 
 ## Voice mode
 
