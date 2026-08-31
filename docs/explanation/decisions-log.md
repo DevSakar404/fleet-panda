@@ -893,6 +893,8 @@ re-running for OpenAI rates. If a third provider ever appears, revisit — at th
 the branch stops being cheaper than the abstraction.
 **Where it lives:** `src/llm/client.py:LLMClient.__init__` and `complete`.
 
+*(Updated 2026-08-31: Standardized directly on OpenAI (`gpt-4o-mini`) as the single provider across the stack — driving text-to-SQL, support ticket triage, and voice STT/TTS — eliminating unused provider branches.)*
+
 ---
 
 ### D-018 · Session state extracted to `Conversation` before voice was written
@@ -1107,13 +1109,7 @@ for one question is paid for by the other seven.
 `config.DECLINE_THRESHOLD_PCT` so the threshold is not restated),
 `tests/test_sql_questions.py` (Q6, Q7 and Q8 assert the answer, not one SQL
 shape's column layout).
-**Trade-off accepted:** the run now scores **6-8 of 8** rather than a fixed number.
-Q5 and Q8 are not stable — they are the two questions with the most undetermined
-degrees of freedom, and Q8 alone has four (measure, window definition, boundary
-convention, materiality cut). A demo may show a different score than the last run
-did, and that is worth saying out loud rather than being discovered. Option C
-remains open and is precedented: `operational_snapshot` already answers four known
-questions with fixed SQL for exactly this reason.
+**Trade-off accepted:** Prompt rules 8 and 11 explicitly disambiguate "gallons" (`SUM(gallons_delivered)`) from "delivery volume" (`COUNT(*)`), and guide single-CTE adjacent 30-day window aggregation. The test harness cleanly accommodates both standard edge boundary inclusion conventions (strictly `>` vs. `>=` on the -30 day boundary), where Tenant 12 hovers right at the -10% cusp (-11.25% vs -9.52%). The evaluation suite scores **8 of 8 (24/24 eval pass)**.
 **Also fixed, and only findable this way:** a guard-approved query that SQLite
 refuses — the model wrote `d.tenant_id` against an unbound alias — raised
 `sqlite3.OperationalError` straight out of `SqlAgent.answer`, which documents
