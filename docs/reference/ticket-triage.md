@@ -256,7 +256,7 @@ malformed narrative costs formatting, not the brief.
 - **Visibility check** (`Router._triage`): in a bound session, a ticket whose
   `tenant_id` differs from the session's returns the *same* "I can't find ticket
   #N" message as a missing ticket — not a distinguishable refusal (enumeration
-  oracle, F3 in [SECURITY.md](../how-to/security-review.md)).
+  oracle, F3 in [security-review.md](../explanation/security-review.md)).
 
 ---
 

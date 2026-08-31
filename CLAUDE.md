@@ -98,8 +98,8 @@ Create exactly this. Do not invent additional top-level directories.
 ├── .env.example
 ├── docs/                  # all project docs, Diátaxis split (see section 10)
 │   ├── reference/         # what it is: the five feature specs + design.md
-│   ├── explanation/       # why: architecture-decisions.md, decisions-log.md, recon.md
-│   ├── how-to/            # tasks: run-locally.md, security-review.md
+│   ├── explanation/       # why: architecture-decisions.md, decisions-log.md, recon.md, security-review.md
+│   ├── how-to/            # tasks: run-locally.md
 │   └── project/           # meta: open-questions.md, handoff.md, assignment.md
 ├── data/                  # provided data files (read-only, never modified)
 ├── src/
@@ -194,7 +194,7 @@ updated every session.
 | Session | `agent/session.py` | `TenantContext`: TENANT or PLATFORM. Questions 1, 2, 7 and 8 are cross-tenant and are refused when scoped. |
 | Agent | `agent/{sql_agent,escalation,triage_agent,router}.py` | Two LLM calls per question (D-007); escalation is pure Python (D-010, D-012); triage fans in five sources. |
 | Transport | `interfaces/{cli_chat,voice_chat}.py`, `interfaces/speech.py` | Chat runs without an API key — triage, scoping and every refusal path are deterministic. Voice is push-to-talk (`whisper-1` in, `tts-1` out) over the shared `Conversation` core (D-018). |
-| Docs | `docs/explanation/recon.md`, `docs/reference/design.md`, `docs/explanation/decisions-log.md`, `docs/how-to/security-review.md`, `docs/project/open-questions.md` | Every assignment deliverable is written, voice included. |
+| Docs | `docs/explanation/recon.md`, `docs/reference/design.md`, `docs/explanation/decisions-log.md`, `docs/explanation/security-review.md`, `docs/project/open-questions.md` | Every assignment deliverable is written, voice included. |
 
 **No stubs remain. 313 tests pass.** The eight graded questions are asserted twice:
 against hand-written reference SQL, and end to end through the agent.

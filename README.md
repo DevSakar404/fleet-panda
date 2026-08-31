@@ -146,7 +146,7 @@ This documentation is modular (hub-and-spoke, following the
 | [docs/reference/voice-interface.md](docs/reference/voice-interface.md) | Reference | The voice transport pipeline: push-to-talk recording, domain-primed Whisper STT + `normalize_transcript` repair, prose-only `spoken_text` rendering, sentence-streamed TTS, and the acoustic confirmation gate. |
 | [docs/reference/design.md](docs/reference/design.md) | Reference | Request-flow diagrams and module boundaries. |
 | [docs/how-to/run-locally.md](docs/how-to/run-locally.md) | How-to | Run chat, voice, and offline mode; run the test suite. |
-| [docs/how-to/security-review.md](docs/how-to/security-review.md) | How-to | Code-review challenge: three vulnerabilities in a sample text-to-SQL endpoint, each with an attack scenario and the implemented fix. |
+| [docs/explanation/security-review.md](docs/explanation/security-review.md) | Explanation | Code-review challenge: three vulnerabilities in a sample text-to-SQL endpoint, each with an attack scenario and the implemented fix. |
 | [docs/project/handoff.md](docs/project/handoff.md) | Project / status | What is complete, what is pending, and the known edge cases and limitations. |
 
 ### Supporting deliverables (assignment context, retained)

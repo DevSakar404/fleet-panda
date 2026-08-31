@@ -643,8 +643,9 @@ so this holds today.
 
 ### What this model does not include
 
-STT/TTS for voice mode (unpriced — `faster-whisper` and `edge-tts` run locally, so
-the cost is compute, not API), retries (~1 in N questions triggers the guard-
+STT/TTS for voice mode (excluded — `speech.py` uses OpenAI `whisper-1` and `tts-1`,
+which bill per audio-minute and per character respectively, a separate meter from
+the token model priced here), retries (~1 in N questions triggers the guard-
 rejection retry, adding one generation call), and the intent classifier, which is
 free in the common case because `Router.classify` resolves unambiguous input with
 heuristics and only calls the model when genuinely stuck.

@@ -301,7 +301,7 @@ triaging a ticket that belongs to another tenant gets the *same* "I can't find
 ticket #N" message as a genuinely missing ticket. Distinguishing them turned the
 tool into an enumeration oracle — ticket ids are sequential four-digit integers,
 so a scoped user could map every id in use across the platform by sorting replies
-into "refused" and "not found" (F3 in [SECURITY.md](../how-to/security-review.md)).
+into "refused" and "not found" (F3 in [security-review.md](../explanation/security-review.md)).
 
 ---
 
@@ -379,7 +379,7 @@ SQL half.
 This section states how the guarantee maps onto FastAPI, because the isolation
 core (`TenantContext` → `SqlGuard` → `QueryExecutor`) is transport-agnostic by
 design and would be reused unchanged. The worked version, with the three
-vulnerabilities it closes, is in [SECURITY.md](../how-to/security-review.md).
+vulnerabilities it closes, is in [security-review.md](../explanation/security-review.md).
 
 ```python
 from fastapi import Depends, FastAPI, HTTPException
@@ -410,10 +410,10 @@ Rules for the service boundary:
 
 | Rule | Reason |
 |---|---|
-| The tenant is a **dependency-injected** value derived from the verified session/JWT, never a request field | A caller-supplied `tenant_id` is horizontal privilege escalation (SECURITY.md V1) |
+| The tenant is a **dependency-injected** value derived from the verified session/JWT, never a request field | A caller-supplied `tenant_id` is horizontal privilege escalation (security-review.md V1) |
 | `QueryRequest` has **no** `tenant_id` field | The parameter an attacker would tamper with should not exist |
 | The `PLATFORM` scope is reachable only for `principal.is_internal`, never from an end-customer or tenant path | `PLATFORM` disables predicate injection entirely |
-| `SessionScope` is currently self-asserted by the caller of `Conversation` | Acceptable for a CLI; a service must derive it from the principal (F1 in SECURITY.md, open by design) |
+| `SessionScope` is currently self-asserted by the caller of `Conversation` | Acceptable for a CLI; a service must derive it from the principal (F1 in security-review.md, open by design) |
 | Refusal reasons are safe to return; the executed SQL is not (except to internal operators) | Reasons describe policy; SQL describes schema |
 | One `TenantContext` per request, constructed at the boundary and passed down | Matches the CLI: the frozen object is the contract, not the transport |
 
@@ -424,6 +424,6 @@ Rules for the service boundary:
 | File | Asserts |
 |---|---|
 | `tests/test_tenant_isolation.py` (15) | A tenant-A query never returns tenant-B rows; predicates injected into subqueries, derived tables, CTE bodies; the **deliberately-bypassed-guard** test that proves layers 1 and 3 still hold; layer 3 is a detector, not a guarantee |
-| `tests/test_security.py` (18) | The three [SECURITY.md](../how-to/security-review.md) fixes; guard rejections — multi-statement, non-SELECT, `sqlite_*`, off-allowlist, `ATTACH`/`PRAGMA` via `Command`, cross-database |
+| `tests/test_security.py` (18) | The three [security-review.md](../explanation/security-review.md) fixes; guard rejections — multi-statement, non-SELECT, `sqlite_*`, off-allowlist, `ATTACH`/`PRAGMA` via `Command`, cross-database |
 | `tests/test_entity_resolution.py` (10) | The cascade; fuzzy gate on candidate *count* not score; refusal on ambiguity; the nearest-suggestion floor |
 | `tests/test_conversation.py` (14) | Scope transitions; the confirmation gate binds only on an affirmative and cancels on anything else |
