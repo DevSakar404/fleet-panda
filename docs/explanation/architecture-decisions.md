@@ -12,15 +12,14 @@ below link to it.
 
 ## 1. No agent framework
 
-**Choice:** direct provider SDK calls (`anthropic`, `openai`), no LangChain /
+**Choice:** direct provider SDK calls (`openai`), no LangChain /
 LlamaIndex / CrewAI / LangGraph.
 
 The two things a reviewer needs to interrogate in this system are the *prompts*
 and the *control flow* around them. A framework's value proposition is hiding
-exactly those behind an abstraction. The whole LLM surface here is one 122-line
-file (`src/llm/client.py`, one `complete()` method, one branch for the second
-provider) and one prompt file (`src/llm/prompts.py`, every system prompt in one
-place). There is no retry-orchestration layer, no tool-router object, no chain —
+exactly those behind an abstraction. The whole LLM surface here is one clean
+file (`src/llm/client.py`, one `complete()` method) and one prompt file
+(`src/llm/prompts.py`, every system prompt in one place). There is no retry-orchestration layer, no tool-router object, no chain —
 the control flow is plain Python `for attempt in range(...)` in `sql_agent.py`
 that a reader can follow top to bottom.
 

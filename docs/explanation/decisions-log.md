@@ -633,8 +633,7 @@ to ~109,090 tokens/day: **$2.03 → $1.51/day, 26% cheaper**, with `cache_system
 in `SqlAgent._generate()` and `LLMClient.complete()`. It also cuts latency on the
 voice path, which matters more.
 
-- **Anthropic:** `LLMClient` sends `cache_control: {"type": "ephemeral"}` on the system prompt.
-- **OpenAI:** Prefix caching is applied automatically for prompts >= 1024 tokens and recorded via `prompt_tokens_details.cached_tokens`.
+- **OpenAI:** Prefix caching is applied automatically for the 1,165-token schema prompt (>= 1024 tokens) and recorded via `prompt_tokens_details.cached_tokens`.
 
 Two caveats: the minimum cacheable prefix is ~1024 tokens and the card is 1,165, so
 it only just qualifies — trimming the card would silently disable caching. And the

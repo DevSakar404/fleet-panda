@@ -138,8 +138,7 @@ for attempt in range(1, config.SQL_MAX_ATTEMPTS + 1):
 | **Call 2 (Synthesis)** | ~276 | ~90 | Uncached (Dynamic row payload) |
 | **Total per Question** | **1,456** | **210** | **~26% total daily cost reduction** |
 
-- **Anthropic:** `LLMClient` adds `cache_control: {"type": "ephemeral"}` to the system prompt block.
-- **OpenAI:** Prefix caching triggers automatically for prompts $\ge 1,024$ tokens; cached token count is tracked via `prompt_tokens_details.cached_tokens`.
+- **OpenAI:** Prefix caching triggers automatically for the 1,165-token schema prompt ($\ge 1,024$ tokens); cached token count is tracked via `prompt_tokens_details.cached_tokens`.
 
 ---
 

@@ -185,7 +185,7 @@ src/
   agent/               session (TenantContext), router, conversation, sql_agent,
                        triage_agent, ticket_parser, escalation (pure, no LLM)
   interfaces/          cli_chat, voice_chat, speech (the only file touching audio)
-tests/                 313 tests; entity resolution, tenant isolation, the 8
+tests/                 310 tests; entity resolution, tenant isolation, the 8
                        questions, security fixes, escalation, triage, ticket
                        parsing, voice
 ```

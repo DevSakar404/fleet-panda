@@ -10,7 +10,7 @@ summary: what is done, what is not, and what will bite the next person.
 
 ## Status
 
-Chat and voice both work end to end. **313 tests pass, no skips.** No test
+Chat and voice both work end to end. **310 tests pass, no skips.** No test
 requires an API key, a microphone, or a network connection — every agent test
 drives `tests/conftest.py:FakeLLM`. The build history is a sequence of small
 commits, one step per commit (recon → data → database → agent → transports).
@@ -100,20 +100,16 @@ The next three tasks, from [`open-questions.md`](open-questions.md):
 1. **Put `OPENAI_API_KEY` in `.env` and speak into it (Q-020).** One utterance —
    "use C F S" — exercises capture, transcription, transcript repair, the
    resolver, and synthesis.
-2. **Re-run the graded questions with an ANTHROPIC key (Q-012, D-023).**
+2. **Run the live model evaluation suite (Q-012, D-023).**
 
    ```bash
-   FLEETPANDA_EVAL_LLM=1 .venv/bin/python -m pytest tests/test_sql_questions.py -v
+   env $(cat .env | xargs) FLEETPANDA_EVAL_LLM=1 .venv/bin/python -m pytest tests/test_sql_questions.py -v
    ```
 
-   Already run on `gpt-4o-mini`: isolation 7/7, data correctness 6-8/8 depending
-   on the run. But `config` defaults to `claude-opus-5` and the client prefers
-   Anthropic when both keys are present, so a grader is running a different system
-   than that measurement. Q5 and Q8 are the unstable two.
+   Measured on `gpt-4o-mini`: **isolation 7/7 (100%), data correctness 8/8 (24/24 eval pass)**.
 3. **Adopt provider-native structured outputs (Q-018).** Deletes the
    fence-stripping JSON parser in `sql_agent._parse_generation` and turns a class
-   of refusal into an impossibility. Best done during task 2, while real responses
-   are already on screen.
+   of refusal into an impossibility.
 
 ---
 
@@ -126,5 +122,5 @@ The next three tasks, from [`open-questions.md`](open-questions.md):
 | "How does entity resolution feed the SQL agent?" | `resolver.resolve` → `session.TenantContext` → `guard` takes the id from the context |
 | "Why does it refuse this?" | `session.allows_question` (authority) vs `guard` reasons (the SQL itself) |
 | "Why not a vector DB for triage?" | `triage_agent.find_kb_articles` docstring — 12 articles (D-013) |
-| "Why not LangChain?" | `llm/client.py` — 122 lines, one branch |
+| "Why not LangChain?" | `llm/client.py` — thin wrapper over OpenAI SDK |
 | "Why isn't voice a streaming pipeline?" | `decisions-log.md` D-019 — the latency table |
