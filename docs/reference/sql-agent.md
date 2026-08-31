@@ -78,6 +78,7 @@ graph TD
 ### Call 2: Answer Synthesis (Fact-Constrained)
 - **Role:** Translates database rows into 2–3 concise sentences.
 - **Rules:** The model is prohibited from computing new numbers, performing aggregations, or guessing missing values. It receives exact row tuples and formats them directly.
+- **Distribution Summarization:** When results contain multi-row distributions (e.g. fill rates across all tenants), the model summarizes with the range (min/max), key leaders, or averages rather than reciting long raw enumerations. Designed for both screen and voice playback.
 
 ---
 

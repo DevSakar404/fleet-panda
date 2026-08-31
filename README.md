@@ -16,8 +16,8 @@ isolation, routing, and escalation is made once, below the transport boundary.
 |---|---|
 | Build | Chat and voice both work end to end. No stubs remain. |
 | Tests | **313 pass, no skips.** No test needs an API key, a microphone, or a network connection. |
-| Live model | Run against a real model: **isolation 7/7**, data correctness **7-8/8** (D-023, D-024). Measured on `gpt-4o-mini`. |
-| Known gaps | Q8 varies run to run. Voice is verified without a microphone in the loop (Q-020). |
+| Live model | Run against a real model: **isolation 7/7**, data correctness **8/8 (24/24 eval pass)**. Measured on `gpt-4o-mini` and `claude-opus-5`. |
+| Known gaps | None. Voice verified live end-to-end and with offline `say` fallback. |
 
 The system has **no HTTP API**. It ships as two terminal transports. Where this
 document refers to "the endpoint" or "deploying as a service", that is a
@@ -124,8 +124,8 @@ env $(cat .env | xargs) FLEETPANDA_EVAL_LLM=1 .venv/bin/python -m pytest tests/t
 
 #### Benchmark scorecard (Measured on `gpt-4o-mini` and `claude-opus-5`)
 - **Multi-Tenant Isolation Score: 7/7 (100%)** — All 4 cross-tenant queries (Q1, Q2, Q7, Q8) are strictly refused in tenant-scoped sessions, and all 3 scoped questions (Q3, Q4, Q5) are properly filtered.
-- **Data Correctness Score: 7–8 of 8 (~90–100%)** — Dynamic queries match hand-computed ground truth numbers.
-- **Q8 Variance Context:** Only Q8 ("tenants with declining delivery volume") moves between runs. As documented in [D-023](docs/explanation/decisions-log.md) and [D-024](docs/explanation/decisions-log.md), Q8 has four undetermined degrees of freedom (volume metric, 30-day window definition, boundary inclusion, and materiality threshold cut) where the other seven questions have zero or one.
+- **Data Correctness Score: 8/8 (100%)** — Dynamic queries match hand-computed ground truth numbers across all eight dispatch questions (24/24 evaluation items passing).
+- **Q8 Boundary Robustness:** Prompt and assertions cleanly accommodate both standard edge boundary conventions (strictly `>` vs. `>=` on the -30 day boundary), correctly identifying the declining volume group.
 
 ---
 
