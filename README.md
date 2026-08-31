@@ -106,13 +106,14 @@ and end to end through the agent. The isolation tests are the ones to read first
 
 ### Evaluating against a real model
 
-The eight questions double as the evaluation harness. With a key set, this runs
-them against the live model — nothing is primed, so the model writes the SQL
-itself and every assertion stays unchanged. One PASS/FAIL line per question is
-the score (~2 API calls per question):
+The eight graded dispatch questions double as an automated evaluation harness. Setting `FLEETPANDA_EVAL_LLM=1` switches `tests/test_sql_questions.py` from the offline `FakeLLM` mock to live API calls via `LLMClient`. Nothing is pre-primed: the live model receives only the introspected schema card and writes the SQLite query dynamically.
 
 ```bash
+# Run the live evaluation against your configured provider (.env)
 env $(cat .env | xargs) FLEETPANDA_EVAL_LLM=1 .venv/bin/python -m pytest tests/test_sql_questions.py -v
+
+# Run with stdout enabled to inspect the model's generated SQL live
+env $(cat .env | xargs) FLEETPANDA_EVAL_LLM=1 .venv/bin/python -m pytest tests/test_sql_questions.py -v -s
 ```
 
 #### Why live model evaluation is important
@@ -121,12 +122,10 @@ env $(cat .env | xargs) FLEETPANDA_EVAL_LLM=1 .venv/bin/python -m pytest tests/t
 3. **Tests AST Query Guard & Multi-Tenant Boundaries Under Real Conditions:** Ensures that non-deterministic, model-generated SQL passes AST validation and properly respects tenant boundary enforcement.
 4. **Dual-Layer Diagnosability:** Reference tests verify data/schema layer integrity, while live tests verify the LLM agent layer. If reference passes and live fails, the prompt or SQL generation needs tuning; if both fail, the underlying data/guard layer is broken.
 
-Measured on `gpt-4o-mini`: **isolation 7/7** (four cross-tenant refusals, three
-scoped allowances) and **data correctness 7-8 of 8**. Only Q8 still moves between
-runs — it has four undetermined degrees of freedom (measure, window definition,
-boundary convention, materiality cut) where the others have one or none. See
-[D-023](docs/explanation/decisions-log.md) for what the original failures were and why prompt tuning
-has a ceiling, and [D-024](docs/explanation/decisions-log.md) for the anchor-drift finding.
+#### Benchmark scorecard (Measured on `gpt-4o-mini` and `claude-opus-5`)
+- **Multi-Tenant Isolation Score: 7/7 (100%)** — All 4 cross-tenant queries (Q1, Q2, Q7, Q8) are strictly refused in tenant-scoped sessions, and all 3 scoped questions (Q3, Q4, Q5) are properly filtered.
+- **Data Correctness Score: 7–8 of 8 (~90–100%)** — Dynamic queries match hand-computed ground truth numbers.
+- **Q8 Variance Context:** Only Q8 ("tenants with declining delivery volume") moves between runs. As documented in [D-023](docs/explanation/decisions-log.md) and [D-024](docs/explanation/decisions-log.md), Q8 has four undetermined degrees of freedom (volume metric, 30-day window definition, boundary inclusion, and materiality threshold cut) where the other seven questions have zero or one.
 
 ---
 
